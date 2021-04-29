@@ -489,8 +489,7 @@ class ItemWindow(object):
     def _format_field(self, s, max_, dots=False):
         if not s:
             s = 'None'
-        s = s.encode('ascii', 'ignore')
-        s = s.decode()
+
         ln = len(s)
         if dots:
             if ln > max_ - 3:

@@ -117,11 +117,11 @@ class SearchResult(object):
             self, origin, name, link, seeders, leechers, size, magnet_url=None
     ):
         self.origin = origin
-        self.name = name
+        self.name = name.encode('ascii', 'ignore').decode()
         self.link = link
         self.seeders = seeders
         self.leechers = leechers
-        self.size = size.replace(' ', '')
+        self.size = size.replace(' ', '').encode('ascii', 'ignore').decode()
         self.magnet_url = magnet_url
 
         sb = self.size.lower()
