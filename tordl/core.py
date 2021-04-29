@@ -146,6 +146,9 @@ class DlFacade(object):
     def engines(self):
         return self._engines
 
+    def fetch_pages_blocking(self, search_term):
+        return asyncio.run(self._mk_fetch_coros(search_term))
+
     async def search(self, expression, new_search=False):
         tasks = []
         for dl in self._engines.values():
@@ -161,6 +164,19 @@ class DlFacade(object):
     async def get_magnet_url(self, search_result):
         e = self._engines[search_result.origin]
         return await e.get_magnet_url(search_result)
+
+    async def _mk_fetch_coros(self, search_term):
+        coros = []
+        for i in range(cfg.PAGE_NUM_DOWNLOAD):
+            coros.append(
+                self.search(search_term if i == 0 else None)
+            )
+        done, _ = await asyncio.wait(coros)
+        items = []
+        for t in done:
+            items.extend(t.result())
+
+        return items
 
     def _load_engines(self):
         loader = importlib.machinery.SourceFileLoader(

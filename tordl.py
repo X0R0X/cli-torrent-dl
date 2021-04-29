@@ -78,6 +78,14 @@ def parse_args():
         default=False,
         help='Test all active search engines for errors.'
     )
+    ap.add_argument(
+        '-n',
+        '--page-num-download',
+        dest='cfg_page_num_download',
+        default=cfg.PAGE_NUM_DOWNLOAD,
+        type=int,
+        help='Fetch N pages of search results from search engines.'
+    )
     parsed = ap.parse_args(sys.argv[1:])
     return parsed
 
