@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import inspect
 import subprocess
+import time
 from importlib import machinery, util
 
 from aiohttp import ClientSession
@@ -27,6 +28,90 @@ def open_torrent_link(link):
     )
 
 
+def direct_download(st):
+    if not st:
+        print('No search term defined, cannot use --download option.')
+        exit(1)
+
+    dl = DlFacade()
+    print('Searching %s for "%s"...' % (','.join(cfg.SEARCH_ENGINES), st))
+    results = asyncio.run(dl.search(st))
+    if results:
+        results = sorted(results, key=lambda r: r.seeders, reverse=True)
+        result = results[0]
+        print('Found "%s", seeds: %s, size: %s,  ' % (
+            result.name, result.seeders, result.size
+        ))
+        if result.magnet_url:
+            magnet_url = result.magnet_url
+        else:
+            print('Fetching magnet link...')
+            magnet_url = asyncio.run(dl.get_magnet_url(result))
+
+        print('Running torrent client...')
+        run_torrent_client(magnet_url)
+    else:
+        print('No results found.')
+
+
+def test_search_engines():
+    st = 'Star Wars'
+    dl = DlFacade()
+    es = dl.engines.values()
+    test_results = []
+    for e in es:
+        cls = e.__class__
+        print(
+            'Testing %s [%s]...' % (
+                '%s.%s' % (cls.__module__, cls.__qualname__), e.NAME
+            )
+        )
+        error = False
+        t = time.time()
+        results = asyncio.run(e.search(st))
+        t = time.time() - t
+        if len(results) > 0:
+            print('  - Search results (%d) fetched.' % len(results))
+            r = results[0]
+            if not r.name:
+                error = True
+                print('  - ERROR: Name not found !')
+            if not r.link and not r.magnet_url:
+                error = True
+                print('  - ERROR: Link not found !')
+            if not r.seeders:
+                error = True
+                print('  - ERROR: Seeders not found !')
+            if not r.leechers:
+                error = True
+                print('  - ERROR: Leechers not found !')
+            if not r.size:
+                error = True
+                print('  - ERROR: Size not found !')
+            if not r.link:
+                error = True
+                print('  - ERROR: Link not found !')
+            if not r.magnet_url:
+                magnet_url = asyncio.run(e.get_magnet_url(r))
+                if magnet_url:
+                    print('  - Magnet URL fetched.')
+                else:
+                    error = True
+                    print('  - ERROR: MagnetURL not found !')
+        else:
+            error = True
+            print('  - ERROR, no results found !')
+        if not error:
+            test_results.append('[OK] %s [search_time=%.3fs]' % (e.NAME, t))
+        else:
+            test_results.append('[ERR] %s [search_time=%.3fs]' % (e.NAME, t))
+
+    print('-' * 20)
+    for m in test_results:
+        print(m)
+    print('-' * 20)
+
+
 class SearchResult(object):
     def __init__(
             self, origin, name, link, seeders, leechers, size, magnet_url=None
@@ -39,20 +124,20 @@ class SearchResult(object):
         self.size = size.replace(' ', '')
         self.magnet_url = magnet_url
 
-        self.size_b = self.size.lower()
-        if 'kb' in self.size_b:
-            self.size_b = float(self.size_b.replace('kb', '')) * 1024
-        elif 'mb' in self.size_b:
-            self.size_b = float(self.size_b.replace('mb', '')) * (1024 ** 2)
-        elif 'gb' in self.size_b:
-            self.size_b = float(self.size_b.replace('gb', '')) * (1024 ** 3)
-        elif 'tb' in self.size_b:
-            self.size_b = float(self.size_b.replace('tb', '')) * (1024 ** 4)
-        elif 'b' in self.size_b:
-            self.size_b = float(self.size_b.replace('b', ''))
+        sb = self.size.lower()
+        if 'kb' in sb:
+            self.size_b = float(sb.replace('kb', '')) * 1024
+        elif 'mb' in sb:
+            self.size_b = float(sb.replace('mb', '')) * (1024 ** 2)
+        elif 'gb' in sb:
+            self.size_b = float(sb.replace('gb', '')) * (1024 ** 3)
+        elif 'tb' in sb:
+            self.size_b = float(sb.replace('tb', '')) * (1024 ** 4)
+        elif 'b' in sb:
+            self.size_b = float(sb.replace('b', ''))
         else:
             try:
-                self.size_b = float(self.size_b)
+                self.size_b = float(sb)
             except Exception:
                 pass
             else:
