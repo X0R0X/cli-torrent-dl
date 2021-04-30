@@ -5,7 +5,8 @@ from tordl.core import BaseDl, SearchResult
 
 class KickAssTorrents(BaseDl):
     NAME = 'KAT'
-    BASE_URL = 'https://katcr.to'
+    BASE_URL = 'https://kickasss.to'
+    # BASE_URL = 'https://katcr.to'
     SEARCH_URL = '%s/search/%s/%s/' % (BASE_URL, '%s', '%s')
 
     def _mk_search_url(self, expression):
