@@ -83,6 +83,28 @@ def parse_args():
         type=int,
         help='Fetch N pages of search results from search engines.'
     )
+    ap.add_argument(
+        '-a',
+        '--api',
+        default=False,
+        action='store_true',
+        help='Run in API mode: fetch result and print json to the stdout.'
+    )
+    ap.add_argument(
+        '-p',
+        '--pretty-json',
+        default=False,
+        action='store_true',
+        help='Print JSON in pretty format if using --api mode.'
+    )
+    ap.add_argument(
+        '-o',
+        '--timeout',
+        dest='cfg_request_timeout',
+        default=cfg.REQUEST_TIMEOUT,
+        type=float,
+        help='Search / fetch magnet URL request timeout.'
+    )
     parsed = ap.parse_args(sys.argv[1:])
     return parsed
 
@@ -148,14 +170,14 @@ if __name__ == "__main__":
     init_cfg()
     override_cfg(parsed_args)
 
-    if parsed_args.test_search_engines:
-        core.test_search_engines()
-        exit(0)
-
     search_term = ' '.join(parsed_args.search)
 
     if parsed_args.download:
         core.direct_download(search_term)
+    elif parsed_args.test_search_engines:
+        core.test_search_engines()
+    elif parsed_args.api:
+        core.run_api(search_term, parsed_args.pretty_json)
     else:
         run_curses_ui(search_term)
 

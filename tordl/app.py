@@ -507,9 +507,10 @@ class ItemWindow(object):
 
 
 class App(object):
-    def __init__(self, screen, search=''):
+    def __init__(self, screen, search='', loop=None):
         self._screen = screen
         self._start_search_str = search
+        self._loop = asyncio.get_event_loop() or loop
 
         self._downloader = DlFacade()
 
@@ -537,10 +538,11 @@ class App(object):
 
             if self._start_search_str:
                 self._item_window.set_items(
-                    self._downloader.fetch_pages_blocking(
-                        self._start_search_str
+                    self._loop.run_until_complete(
+                        self._downloader.fetch_pages(self._start_search_str)
                     )
                 )
+                self._item_window.clear()
                 self._start_search_str = None
                 key = -1
             else:
@@ -629,7 +631,9 @@ class App(object):
         self._item_window.refresh()
 
         self._item_window.set_items(
-            self._downloader.fetch_pages_blocking(search_term)
+            self._loop.run_until_complete(
+                self._downloader.fetch_pages(search_term)
+            )
         )
 
     def _process_screen_resize(self):
@@ -639,9 +643,10 @@ class App(object):
 
     def _load_more_results(self):
         self._bottom_bar.set_loading_more_progress()
-        self._item_window.set_items(
-            self._downloader.fetch_pages_blocking(None), True
+        items = self._loop.run_until_complete(
+            self._downloader.fetch_pages(None)
         )
+        self._item_window.set_items(items, True)
 
     def _fetch_magnet_url(self, item):
         self._bottom_bar.set_fetching_magnet_url()
