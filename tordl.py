@@ -2,13 +2,12 @@
 
 import argparse
 import curses
-import json
 import os
 import shutil
 import sys
 from functools import partial
 
-from tordl import config as cfg, engines, core
+from tordl import config as cfg, core
 from tordl.app import App
 
 
@@ -109,66 +108,22 @@ def parse_args():
     return parsed
 
 
-def mk_cfg():
-    attrs = dir(cfg)
-    omit = ['os']
-    config = {}
-    for a in attrs:
-        if not a.startswith('CFG') and not a.startswith('__') and a not in omit:
-            config[a.lower()] = getattr(cfg, a)
-
-    return config
-
-
-def init_cfg():
-    if not os.path.exists(cfg.CFG_DIR):
-        os.makedirs(cfg.CFG_DIR)
-
-    if not os.path.exists(cfg.CFG_FILE):
-        with open(cfg.CFG_FILE, 'w') as f:
-            f.write(json.dumps(mk_cfg(), indent=4))
-
-    if not os.path.exists(cfg.CFG_ENGINES_FILE):
-        with open(engines.__file__) as f:
-            engines_module = f.read()
-
-        with open(cfg.CFG_ENGINES_FILE, 'w') as f:
-            f.write(engines_module)
-
-    with open(cfg.CFG_FILE) as f:
-        config = json.load(f)
-
-    for k, v in config.items():
-        setattr(cfg, k.upper(), v)
-
-
-def override_cfg(args):
-    cfg.SEARCH_ENGINES = args.cfg_search_engines.replace(' ', '').split(',')
-
-    omit = ('cfg_search_engines', 'tordl')
-    prefix = 'cfg_'
-    for k in args.__dict__:
-        if k.startswith(prefix) and k not in omit:
-            setattr(cfg, k.upper()[len(prefix):], getattr(args, k))
-
-
 def run_curses_ui(st):
     os.environ.setdefault('ESCDELAY', '0')
     curses.wrapper(partial(App, search=st))
 
 
 if __name__ == "__main__":
-    parsed_args = parse_args()
-
-    if parsed_args.revert_to_default:
+    if '-r' in sys.argv or '--revert-to-default' in sys.argv:
         if os.path.exists(cfg.CFG_DIR):
             shutil.rmtree(cfg.CFG_DIR)
-        init_cfg()
+        cfg.init_cfg()
         print('Reverted to default config.')
         exit(0)
 
-    init_cfg()
-    override_cfg(parsed_args)
+    cfg.init_cfg()
+    parsed_args = parse_args()
+    cfg.override_cfg(parsed_args)
 
     search_term = ' '.join(parsed_args.search)
 
