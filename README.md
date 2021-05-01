@@ -3,8 +3,8 @@
 #### About
 CLI Torrent Downloader provides convenient and quick way to search torrent  
 magnet links (and to run associated torrent client) via major torrent sites 
-(ThePirateBay, LimeTorrents, Zooqle, 1337x, GloTorrents, KickAssTorrents by 
-default) through command line.
+(ThePirateBay, LimeTorrents, Zooqle, 1337x, GloTorrents, KickAssTorrents, 
+SolidTorrents by default) through command line.
 
 #### Prerequisites
 * Python 3.8
