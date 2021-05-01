@@ -252,12 +252,19 @@ class DlFacade(object):
             self,
             dl_classes=None,
     ):
-        self._engines = self._load_engines() \
-            if not dl_classes else {c: c() for c in dl_classes}
+        if dl_classes:
+            self._engines = {c: c() for c in dl_classes}
+            self._all_engines = self._load_engines()[1]
+        else:
+            self._engines, self._all_engines = self._load_engines()
 
     @property
     def engines(self):
         return self._engines
+
+    @property
+    def all_engines(self):
+        return self._all_engines
 
     async def search(self, expression, new_search=False):
         tasks = []
@@ -300,22 +307,22 @@ class DlFacade(object):
         engines_mod = importlib.util.module_from_spec(spec)
         loader.exec_module(engines_mod)
 
-        classes = []
+        all_engines = []
         for name, obj in inspect.getmembers(engines_mod):
             if inspect.isclass(obj):
                 mro = obj.mro()
                 if len(mro) > 2 and BaseDl in mro:
-                    classes.append(obj)
+                    all_engines.append(obj)
 
         engines = {}
-        for c in classes:
+        for c in all_engines:
             if c.NAME in cfg.SEARCH_ENGINES:
                 engines[c] = c()
 
         if not engines:
             raise RuntimeError("No search engines selected.")
 
-        return engines
+        return engines, all_engines
 
 
 class Api(object):

@@ -105,7 +105,7 @@ class BottomBar(object):
     def clear(self):
         self._window_bottom.clear()
 
-    def process_search_mode_key(self, key):
+    def process_key(self, key):
         if key != -1 and chr(key) in '%s%s%s ' % (
                 string.ascii_letters, string.digits, string.punctuation
         ):
@@ -227,6 +227,120 @@ class BottomBar(object):
         self._search_history_index = len(self._search_history)
 
 
+class EngineSelectionWindow(object):
+    WINDOW_CAPTION = 'Engine Selection'
+    BUTTON_OK_CAPTION = 'OK'
+    BUTTON_SAVE_CAPTION = 'SAVE'
+
+    def __init__(self, screen, downloader):
+        self._screen = screen
+        self._active_engines = downloader.engines
+        self._all_engines = downloader.all_engines
+
+        self.active = False
+        self._window = None
+        self._position = 0
+
+    def set_active(self, active):
+        self.active = active
+        if active:
+            self._position = 0
+            self._mk_window()
+        else:
+            self._window.erase()
+            self._window = None
+
+    def draw(self):
+        if self.active:
+            win_w = self._mk_win_w()
+
+            self._window.erase()
+            self._window.box()
+            self._window.addstr(
+                0, (win_w - len(self.WINDOW_CAPTION)) // 2, self.WINDOW_CAPTION
+            )
+            self._window.refresh()
+
+            items = self._all_engines.copy()
+            items.append(self.BUTTON_OK_CAPTION)
+            items.append(self.BUTTON_SAVE_CAPTION)
+            for i, item in enumerate(items):
+                if i == self._position:
+                    mode = curses.A_REVERSE
+                else:
+                    mode = curses.A_NORMAL
+
+                if type(item) is str:
+                    if len(self.WINDOW_CAPTION) % 2 == 0:
+                        sp = ' ' * ((win_w - len(item) - 3) // 2)
+                        cap = '[%s%s%s]' % (sp, item, sp)
+                    else:
+                        sp = ' ' * ((win_w - len(item) - 4) // 2)
+                        cap = '[%s %s%s]' % (sp, item, sp)
+                    self._window.addstr(i + 1, 1, cap, mode)
+                else:
+                    cap = '%s%s' % (
+                        item.NAME, ' ' * (win_w - 3 - len(item.NAME))
+                    )
+                    self._window.addstr(i + 1, 1, cap, mode)
+                    s = '[X]' if item in self._active_engines.keys() else '[ ]'
+                    self._window.addstr(i + 1, win_w - 4, s, mode)
+
+    def process_key(self, key):
+        if key in (curses.ascii.ESC, ord('p')):
+            self.set_active(False)
+        elif key == curses.KEY_UP:
+            self._navigate(-1)
+        elif key == curses.KEY_DOWN:
+            self._navigate(1)
+        elif key in (curses.KEY_ENTER, ord("\n"), 32):
+            if self._position == len(self._all_engines):
+                self.set_active(False)
+            elif self._position == len(self._all_engines) + 1:
+                cfg.SEARCH_ENGINES = [e.NAME for e in self._active_engines]
+                cfg.write_cfg()
+                self.set_active(False)
+            else:
+                self._select_engine()
+
+    def resize(self):
+        if self._window:
+            self._mk_window()
+
+    def _select_engine(self):
+        if len(self._active_engines) > 1 or \
+                self._all_engines[self._position] != \
+                tuple(self._active_engines.keys())[0]:
+            e = self._all_engines[self._position]
+            if e in self._active_engines.keys():
+                del self._active_engines[e]
+            else:
+                self._active_engines[e] = e()
+
+    def _navigate(self, n):
+        self._position += n
+        if self._position < 0:
+            self._position = 0
+        elif self._position >= len(self._all_engines) + 2:
+            self._position = len(self._all_engines) + 2 - 1
+
+    def _mk_win_w(self):
+        a = [len(e.NAME) + 6 for e in self._all_engines]
+        a.append(len(self.WINDOW_CAPTION) + 2)
+        return max(a)
+
+    def _mk_window(self):
+        h, w = self._screen.getmaxyx()
+        win_h = len(self._all_engines) + 4
+
+        win_w = self._mk_win_w()
+
+        self._window = self._screen.subwin(
+            win_h, win_w, (h - win_h) // 2, (w - win_w) // 2
+        )
+        self._window.bkgd(' ', curses.color_pair(1) | curses.A_BOLD)
+
+
 class ItemWindow(object):
     SORT_ORIGIN = 0
     SORT_SEEDERS = 1
@@ -250,7 +364,8 @@ class ItemWindow(object):
             load_more_results_fn,
             fetch_magnet_fn,
             start_search_fn,
-            open_torrent_link_fn
+            open_torrent_link_fn,
+            engine_selection_fn
     ):
 
         self._screen = screen
@@ -258,6 +373,7 @@ class ItemWindow(object):
         self._fetch_magnet_fn = fetch_magnet_fn
         self._start_search_fn = start_search_fn
         self._open_torrent_link_fn = open_torrent_link_fn
+        self._engine_selection_fn = engine_selection_fn
 
         self._window = screen.subwin(0, 0)
         self._window.keypad(1)
@@ -273,10 +389,10 @@ class ItemWindow(object):
     def items(self):
         return self._items
 
-    def process_browse_mode(self, key):
+    def process_key(self, key):
         do_exit = False
         h, w = self._screen.getmaxyx()
-        if key in [curses.KEY_ENTER, ord("\n")]:
+        if key in (curses.KEY_ENTER, ord("\n")):
             if self._items:
                 item = self._items[self._position]
                 if type(item) is self.LoadMoreItem:
@@ -314,6 +430,8 @@ class ItemWindow(object):
             self._items = self._sort_items(self._items, self.SORT_SIZE)
         elif key == ord('m'):
             self._load_more_results_fn()
+        elif key == ord('p'):
+            self._engine_selection_fn()
 
         return do_exit
 
@@ -398,6 +516,10 @@ class ItemWindow(object):
                     )
                 msg = msg + ' ' * (w - len(msg) - 1)
                 self._window.addstr(1 + index, 1, msg, mode | color)
+
+            if max_items < h - 2:
+                for i in range(1, (h - 2) - max_items):
+                    self._window.addstr(max_items + i, 1, ' ' * (w - 1))
 
     def resize(self):
         self._window = self._screen.subwin(0, 0)
@@ -527,7 +649,11 @@ class App(object):
             self._load_more_results,
             self._fetch_magnet_url,
             self._bottom_bar.set_search,
-            self._open_torrent_link
+            self._open_torrent_link,
+            self._create_selection_win
+        )
+        self._engine_selection_win = EngineSelectionWindow(
+            self._screen, self._downloader
         )
 
         self._display()
@@ -549,9 +675,13 @@ class App(object):
                 key = self._screen.getch()
 
             if self._bottom_bar.search_input:
-                self._bottom_bar.process_search_mode_key(key)
+                self._bottom_bar.process_key(key)
+            elif self._engine_selection_win.active:
+                self._engine_selection_win.process_key(key)
+                if not self._engine_selection_win.active:
+                    self._item_window.clear()
             else:
-                do_exit = self._item_window.process_browse_mode(key)
+                do_exit = self._item_window.process_key(key)
                 if do_exit:
                     break
 
@@ -619,9 +749,13 @@ class App(object):
             self._top_bar.resize()
 
         self._bottom_bar.draw()
+
+        self._engine_selection_win.draw()
+
         self._top_bar.refresh()
         self._item_window.refresh()
         self._bottom_bar.refresh()
+
         curses.doupdate()
 
     def _do_search(self, search_term):
@@ -640,6 +774,10 @@ class App(object):
         self._top_bar.resize()
         self._bottom_bar.resize()
         self._item_window.resize()
+        self._engine_selection_win.resize()
+
+    def _create_selection_win(self):
+        self._engine_selection_win.set_active(True)
 
     def _load_more_results(self):
         self._bottom_bar.set_loading_more_progress()
