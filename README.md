@@ -1,5 +1,7 @@
 ## CLI Torrent Downloader
 
+<img src="./img/tordl.gif" width="732">
+
 #### About
 CLI Torrent Downloader provides convenient and quick way to search torrent  
 magnet links (and to run associated torrent client) via major torrent sites 
