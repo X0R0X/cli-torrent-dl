@@ -279,9 +279,8 @@ class EngineSelectionWindow(object):
                         cap = '[%s %s%s]' % (sp, item, sp)
                     self._window.addstr(i + 1, 1, cap, mode)
                 else:
-                    cap = '%s%s' % (
-                        item.NAME, ' ' * (win_w - 3 - len(item.NAME))
-                    )
+                    s = self._mk_item_caption(item)
+                    cap = '%s%s' % (s, ' ' * (win_w - 3 - len(s)))
                     self._window.addstr(i + 1, 1, cap, mode)
                     s = '[X]' if item in self._active_engines.keys() else '[ ]'
                     self._window.addstr(i + 1, win_w - 4, s, mode)
@@ -325,7 +324,7 @@ class EngineSelectionWindow(object):
             self._position = len(self._all_engines) + 2 - 1
 
     def _mk_win_w(self):
-        a = [len(e.NAME) + 6 for e in self._all_engines]
+        a = [len(self._mk_item_caption(e)) + 7 for e in self._all_engines]
         a.append(len(self.WINDOW_CAPTION) + 2)
         return max(a)
 
@@ -339,6 +338,11 @@ class EngineSelectionWindow(object):
             win_h, win_w, (h - win_h) // 2, (w - win_w) // 2
         )
         self._window.bkgd(' ', curses.color_pair(1) | curses.A_BOLD)
+
+    def _mk_item_caption(self, item):
+        return ('%s (%s)' % (
+            item.BASE_URL, item.NAME
+        )).split('//')[1].replace('www.', '')
 
 
 class ItemWindow(object):
