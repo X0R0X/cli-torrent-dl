@@ -1,6 +1,68 @@
+import json
+
 from bs4 import BeautifulSoup
 
 from tordl.core import BaseDl, SearchResult
+
+
+class SolidTorrents(BaseDl):
+    NAME = 'Solid'
+    BASE_URL = 'https://solidtorrents.net'
+    SEARCH_URL = \
+        '%s/api/v1/search?sort=seeders&q=%s&category=all&skip=%s&fuv=yes' % \
+        (BASE_URL, '%s', '%s')
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (
+            expression, str((self._current_index - 1) * 20)
+        )
+
+    def _process_search(self, response):
+        result = []
+        try:
+            results = json.loads(response)['results']
+            for o in results:
+                swarm = o['swarm']
+                result.append(
+                    SearchResult(
+                        type(self),
+                        o['title'],
+                        '/search?q=%s' %
+                        self._current_search,
+                        swarm['seeders'],
+                        swarm['leechers'],
+                        self._hr_size(o['size']),
+                        o['magnet']
+                    )
+                )
+        except Exception:
+            pass
+        return result
+
+    def _mk_magnet_url(self, link):
+        pass
+
+    def _process_magnet_link(self, response):
+        pass
+
+    def _hr_size(self, size):
+        if size < 1024:
+            return '%dB' % size
+        else:
+            size = size / 1024
+            if size < 1024:
+                return '%.2fKB' % size
+            else:
+                size = size / 1024
+                if size < 1024:
+                    return '%.2fMB' % size
+                else:
+                    size = size / 1024
+                    if size < 1024:
+                        return '%.2fGB' % size
+                    else:
+                        size = size / 1024
+                        return '%.2fTB' % size
 
 
 class KickAssTorrents(BaseDl):
