@@ -35,15 +35,30 @@ Show help:
     $ tordl -h
 
 ##### Browse Mode Usage
-* KEY_DOWN, KEYUP, PAGE_UP, PAGE_DOWN - Navigate
+* KEY_DOWN, KEY_UP, PAGE_UP, PAGE_DOWN - Navigate
 * ENTER - Run torrent client
 * SPACE - Open torrent info URL in browser
+* ESC - exit
 * / - Search
 * a - Sort by source (torrent search engine) 
 * s - Sort by seeds (default)
 * d - Sort by leechers 
 * f - Sort by size
 * m - Load more search results (if possible)
+* p - Search engines selection
+
+##### Search Mode Usage
+* KEY_UP - Move to previous in search history
+* KEY_DOWN - Move to next in search history
+* ENTER - Search
+* ESC - Exit search
+
+##### Search Engine Selection Usage
+* KEY_UP, KEY_DOWN - Navigate
+* ENTER, SPACE - Check / Uncheck selected search engine
+* ESC - Save and exit engine selection
+* BUTTON_OK - Save and exit engine selection
+* BUTTON_SAVE - Persist selection in config and exit engine selection
 
 #### Creating own search engine extensions
 See `~/.torrent_dl/engines.py` and `~/.torrent_dl/config.json#search_engines`.
