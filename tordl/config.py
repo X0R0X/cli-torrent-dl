@@ -2,9 +2,13 @@ import json
 import os
 import sys
 
+from xdg.BaseDirectory import save_config_path
+
 from tordl import engines
 
-CFG_DIR = os.path.join(os.path.expanduser('~'), '.torrentdl')
+CFG_DIR = os.path.join(
+    os.path.expanduser('~'), save_config_path('torrentdl')
+)
 CFG_FILE = os.path.join(CFG_DIR, 'config.json')
 CFG_ENGINES_FILE = os.path.join(CFG_DIR, 'engines.py')
 CFG_HISTORY_FILE = os.path.join(CFG_DIR, 'search_history.txt')
@@ -28,7 +32,8 @@ def mk_cfg():
         'init_cfg',
         'override_cfg',
         'write_cfg',
-        'engines'
+        'engines',
+        'save_config_path'
     )
     config = {}
     for a in attrs:
