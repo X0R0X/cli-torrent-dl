@@ -84,7 +84,7 @@ def test_search_engines(loop=None):
             if not r.name:
                 error = True
                 print('  - ERROR: Name not found !')
-            if not r.link and not r.magnet_url:
+            if not r.links[0] and not r.magnet_url:
                 error = True
                 print('  - ERROR: Link not found !')
             if not r.seeders:
@@ -96,7 +96,7 @@ def test_search_engines(loop=None):
             if not r.size:
                 error = True
                 print('  - ERROR: Size not found !')
-            if not r.link:
+            if not r.links[0]:
                 error = True
                 print('  - ERROR: Link not found !')
             if not r.magnet_url:
@@ -129,7 +129,14 @@ def run_api(st, pretty_json=True, loop=None):
         loop = asyncio.get_event_loop()
 
     api = Api()
-    sr = loop.run_until_complete(api.fetch(st))
+    sr = loop.run_until_complete(
+        api.fetch_with_magnet_links(
+            st,
+            cfg.FETCH_MISSING_MAGNET_LINKS,
+            cfg.AGGREGATE_SAME_MAGNET_LINKS,
+            cfg.FETCH_MAGNET_LINKS_CONCURRENCE,
+        )
+    )
     print(api.mk_json_output(sr, pretty_json))
 
 
@@ -137,9 +144,9 @@ class SearchResult(object):
     def __init__(
             self, origin, name, link, seeders, leechers, size, magnet_url=None
     ):
-        self.origin = origin
+        self.origins = [origin]
+        self.links = [link]
         self.name = name.encode('ascii', 'ignore').decode()
-        self.link = link
         self.seeders = seeders
         self.leechers = leechers
         self.size = size.replace(' ', '').encode('ascii', 'ignore').decode()
@@ -197,7 +204,9 @@ class BaseDl(object):
 
     async def get_magnet_url(self, search_result):
         self._set_referer(self._mk_search_url(self._current_search))
-        response = await self._get_url(self._mk_magnet_url(search_result.link))
+        response = await self._get_url(
+            self._mk_magnet_url(search_result.links[0])
+        )
         return self._process_magnet_link(response) if response else None
 
     async def _get_url(self, url):
@@ -247,6 +256,10 @@ class BaseDl(object):
 
 
 class DlFacade(object):
+    class GetMagnetUrlTask(Task):
+        def __init__(self, coro, search_result):
+            super().__init__(coro)
+            self.search_result = search_result
 
     def __init__(
             self,
@@ -257,6 +270,11 @@ class DlFacade(object):
             self._all_engines = self._load_engines()[1]
         else:
             self._engines, self._all_engines = self._load_engines()
+
+        self._ml_fetch_counter = 0
+        self._no_magnet_links = None
+        self._mls_fetched = Event()
+        self._ml_fetch_tasks = None
 
     @property
     def engines(self):
@@ -295,9 +313,50 @@ class DlFacade(object):
 
         return items
 
+    def aggregate_same_magnets(self, search_results, new_search_results=None):
+        if not new_search_results:
+            new_search_results = search_results
+
+        for nsr in new_search_results:
+            for sr in search_results:
+                if nsr != sr:
+                    if nsr.magnet_url and sr.magnet_url == nsr.magnet_url:
+                        sr.origins.append(nsr.origins[0])
+                        sr.links.append(nsr.links[0])
+                        if nsr.seeders > sr.seeders:
+                            sr.seeders = nsr.seeders
+                        if nsr.leechers > sr.leechers:
+                            sr.leechers = nsr.leechers
+                        new_search_results.remove(nsr)
+
+        return new_search_results
+
     async def get_magnet_url(self, search_result):
-        e = self._engines[search_result.origin]
+        e = self._engines[search_result.origins[0]]
         return await e.get_magnet_url(search_result)
+
+    async def fetch_magnet_links(self, search_results, concurrent=20):
+        if self._no_magnet_links is not None:
+            raise RuntimeError('Magnetlink fetch in progress.')
+
+        self._mls_fetched.clear()
+        self._no_magnet_links = []
+        self._ml_fetch_tasks = []
+
+        for sr in search_results:
+            if not sr.magnet_url:
+                self._no_magnet_links.append(sr)
+
+        ln = len(self._no_magnet_links)
+        max_ = min(concurrent, ln)
+        self._ml_fetch_counter = max_ - 1
+        for i in range(0, max_):
+            sr = self._no_magnet_links[i]
+            self._create_ml_fetch_task(sr)
+
+        await self._mls_fetched.wait()
+
+        self._no_magnet_links = None
 
     def _load_engines(self):
         loader = importlib.machinery.SourceFileLoader(
@@ -324,66 +383,68 @@ class DlFacade(object):
 
         return engines, all_engines
 
+    def _on_fetch_magnet_done(self, task):
+        task.search_result.magnet_url = task.result()
+        task.remove_done_callback(self._on_fetch_magnet_done)
+        self._ml_fetch_tasks.remove(task)
+
+        self._ml_fetch_counter += 1
+        if self._ml_fetch_counter < len(self._no_magnet_links):
+            self._create_ml_fetch_task(
+                self._no_magnet_links[self._ml_fetch_counter]
+            )
+
+        if len(self._ml_fetch_tasks) == 0:
+            self._mls_fetched.set()
+
+    def _create_ml_fetch_task(self, search_result):
+        task = self.GetMagnetUrlTask(
+            self.get_magnet_url(search_result), search_result
+        )
+        task.add_done_callback(self._on_fetch_magnet_done)
+        self._ml_fetch_tasks.append(task)
+
 
 class Api(object):
-    class GetMagnetUrlTask(Task):
-        def __init__(self, coro, search_result, max_):
-            super().__init__(coro)
-            self.max_ = max_
-            self.search_result = search_result
-
-    def __init__(self, dl_classes=None, concurrent=20):
+    def __init__(self, dl_classes=None):
         self._dl = DlFacade(dl_classes)
-        self._concurrent = concurrent
 
-        self._counter = 0
-        self._batch_done = Event()
-
-    async def fetch(self, search_term):
+    async def fetch_with_magnet_links(
+            self,
+            search_term,
+            fetch_missing_magnet_links=True,
+            aggregate_same_magnet_links=True,
+            concurrent=20
+    ):
         search_results = await self._dl.fetch_pages(search_term)
 
-        await self._fetch_magnet_links(search_results)
+        if fetch_missing_magnet_links:
+            await self._dl.fetch_magnet_links(
+                search_results, concurrent
+            )
+
+        if aggregate_same_magnet_links:
+            search_results = self._dl.aggregate_same_magnets(search_results)
+
         return search_results
 
     def mk_json_output(self, search_results, pretty=False):
         result = []
         j = {'result': result}
         for sr in search_results:
-            o = {
-                'name': sr.name,
-                'link': '%s%s' % (sr.origin.BASE_URL, sr.link),
-                'magnet_url': sr.magnet_url,
-                'origin': sr.origin.NAME,
-                'seeds': sr.seeders,
-                'leeches': sr.leechers,
-                'size': sr.size
-            }
-            result.append(o)
+            result.append(
+                {
+                    'name': sr.name,
+                    'links': [
+                        '%s%s' % (sr.origins[i].BASE_URL, sr.links[i])
+                        for i in range(len(sr.origins))
+                    ],
+                    'magnet_url': sr.magnet_url,
+                    'origins': [origin.NAME for origin in sr.origins],
+                    'seeds': sr.seeders,
+                    'leeches': sr.leechers,
+                    'size': sr.size
+                }
+            )
 
         return json.dumps(j, indent=4 if pretty else None)
-
-    async def _fetch_magnet_links(self, search_results):
-        no_ml = []
-        for sr in search_results:
-            if not sr.magnet_url:
-                no_ml.append(sr)
-
-        ln = len(no_ml)
-        for i in range(0, ln, self._concurrent):
-            max_ = min(i + self._concurrent, ln)
-            self._counter = 0
-            self._batch_done.clear()
-            for j in range(i, max_):
-                sr = no_ml[j]
-                task = self.GetMagnetUrlTask(
-                    self._dl.get_magnet_url(sr), sr, max_ - i
-                )
-                task.add_done_callback(self._on_fetch_magnet_done)
-
-            await self._batch_done.wait()
-
-    def _on_fetch_magnet_done(self, task):
-        self._counter += 1
-        task.search_result.magnet_url = task.result()
-        if self._counter >= task.max_:
-            self._batch_done.set()

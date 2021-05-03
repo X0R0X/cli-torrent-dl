@@ -513,7 +513,11 @@ class ItemWindow(object):
                             no_len
                         ),
                         self._format_field(item.name, title_length, True),
-                        self._format_field(item.origin.NAME, source_max),
+                        self._format_field(
+                            ','.join([i.NAME for i in item.origins]),
+                            source_max
+                        ),
+                        # self._format_field(item.origin.NAME, source_max),
                         self._format_field(str(item.seeders), seeders_max),
                         self._format_field(str(item.leechers), leechers_max),
                         self._format_field(item.size, size_max)
@@ -586,7 +590,7 @@ class ItemWindow(object):
             elif sort_type == self.SORT_ORIGIN:
                 items = sorted(
                     items,
-                    key=lambda it: it.origin.NAME,
+                    key=lambda it: it.origins[0].NAME,
                     reverse=not self._sort_reverse(self.SORT_ORIGIN)
                             or ignore_reverse
                 )
@@ -668,9 +672,7 @@ class App(object):
 
             if self._start_search_str:
                 self._item_window.set_items(
-                    self._loop.run_until_complete(
-                        self._downloader.fetch_pages(self._start_search_str)
-                    )
+                    self._fetch_results(self._start_search_str)
                 )
                 self._item_window.clear()
                 self._start_search_str = None
@@ -716,12 +718,19 @@ class App(object):
         a.append(len(TopBar.SIZE_CAPTION))
         size_max = max(a)
 
-        a = [
-            len(i.origin.NAME) for i in self._item_window.items
-            if type(i) is not ItemWindow.LoadMoreItem
-        ] if self._item_window.items else []
-        a.append(len(TopBar.SOURCE_CAPTION))
-        source_max = max(a)
+        a0 = []
+        if self._item_window.items:
+            for item in self._item_window.items:
+                if type(item) is not ItemWindow.LoadMoreItem:
+                    a0.append(len(','.join([i.NAME for i in item.origins])))
+        a0.append(len(TopBar.SOURCE_CAPTION))
+        source_max = max(a0)
+        # a = [
+        #     len(i.origin.NAME) for i in self._item_window.items
+        #     if type(i) is not ItemWindow.LoadMoreItem
+        # ] if self._item_window.items else []
+        # a.append(len(TopBar.SOURCE_CAPTION))
+        # source_max = max(a)
 
         no_len = len(str(len(self._item_window.items))) \
             if self._item_window.items else 0
@@ -768,11 +777,7 @@ class App(object):
         self._bottom_bar.set_search_in_progress()
         self._item_window.refresh()
 
-        self._item_window.set_items(
-            self._loop.run_until_complete(
-                self._downloader.fetch_pages(search_term)
-            )
-        )
+        self._item_window.set_items(self._fetch_results(search_term))
 
     def _process_screen_resize(self):
         self._top_bar.resize()
@@ -785,10 +790,29 @@ class App(object):
 
     def _load_more_results(self):
         self._bottom_bar.set_loading_more_progress()
+        self._item_window.set_items(self._fetch_results(None), True)
+
+    def _fetch_results(self, search_term):
         items = self._loop.run_until_complete(
-            self._downloader.fetch_pages(None)
+            self._downloader.fetch_pages(search_term)
         )
-        self._item_window.set_items(items, True)
+
+        if cfg.FETCH_MISSING_MAGNET_LINKS:
+            self._loop.run_until_complete(
+                self._downloader.fetch_magnet_links(
+                    items, cfg.FETCH_MAGNET_LINKS_CONCURRENCE
+                )
+            )
+
+        if cfg.AGGREGATE_SAME_MAGNET_LINKS:
+            if search_term is not None:
+                items = self._downloader.aggregate_same_magnets(items)
+            else:
+                items = self._downloader.aggregate_same_magnets(
+                    self._item_window.items, items
+                )
+
+        return items
 
     def _fetch_magnet_url(self, item):
         self._bottom_bar.set_fetching_magnet_url()
@@ -804,4 +828,6 @@ class App(object):
                 pass
 
     def _open_torrent_link(self, item):
-        core.open_torrent_link('%s%s' % (item.origin.BASE_URL, item.link))
+        core.open_torrent_link(
+            '%s%s' % (item.origins[0].BASE_URL, item.links[0])
+        )

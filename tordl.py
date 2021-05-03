@@ -87,7 +87,8 @@ def parse_args():
         '--api',
         default=False,
         action='store_true',
-        help='Run in API mode: fetch result and print json to the stdout.'
+        help='Run in API mode: fetch result and print json to the stdout. '
+             'Consider using --fetch-missing-magnet-links as well.'
     )
     ap.add_argument(
         '-p',
@@ -103,6 +104,36 @@ def parse_args():
         default=cfg.REQUEST_TIMEOUT,
         type=float,
         help='Search / fetch magnet URL request timeout.'
+    )
+    ap.add_argument(
+        '-g',
+        '--dont-aggregate-same-magnet-links',
+        dest='cfg_aggregate_same_magnet_links',
+        default=not cfg.AGGREGATE_SAME_MAGNET_LINKS,
+        action='store_false',
+        help='If the magnet link of two search result is the same, aggregate it'
+             ' to one record. Consider using --fetch-missing-magnet-links.'
+    )
+    ap.add_argument(
+        '-m',
+        '--fetch-missing-magnet-links',
+        dest='cfg_fetch_missing_magnet_links',
+        default=cfg.FETCH_MISSING_MAGNET_LINKS,
+        action='store_true',
+        help='Some torrent sites (1337x.to, limetorrents.info) don\'t provide '
+             'magnet links in the search result - we need to fetch associated '
+             'html link to obtain it. If this flag is turned on, tordl will '
+             'fetch magnet links automatically. WARNING: This will considerably'
+             ' slow down the search process.'
+    )
+    ap.add_argument(
+        '-l',
+        '--fetch-magnet-link-concurrence',
+        dest='cfg_fetch_magnet_link_concurrence',
+        default=cfg.FETCH_MAGNET_LINKS_CONCURRENCE,
+        type=int,
+        help='If --fetch-missing-magnet-links is turned on, tordl will be '
+             'fetching N magnet links concurrently to speed up the process.'
     )
     parsed = ap.parse_args(sys.argv[1:])
     return parsed
