@@ -1,9 +1,14 @@
 import asyncio
 import curses
+import logging
 import os
 import string
+from asyncio import Task
 from collections import deque
 from curses import ascii
+from functools import partial
+from threading import Thread, Lock
+from time import sleep
 
 from tordl import config as cfg
 from tordl import core
@@ -71,6 +76,7 @@ class BottomBar(object):
         self._search_input = False
         self._search_cur_pos = 0
         self._delta_cur_pos = 0
+        self._message = None
 
         self._search_history = self._load_search_history()
         self._add_to_search_history(start_search)
@@ -186,23 +192,23 @@ class BottomBar(object):
             self._window_bottom.move(0, self._search_cur_pos)
         self._window_bottom.refresh()
 
+        if self._message:
+            self._window_bottom.addstr(0, 0, self._message)
+
     def refresh(self):
         self._window_bottom.refresh()
 
     def set_search_in_progress(self):
-        self._window_bottom.clear()
-        self._window_bottom.addstr(0, 0, self.SEARCH_IN_PROGRESS_CAPTION)
-        self._window_bottom.refresh()
+        self._message = self.SEARCH_IN_PROGRESS_CAPTION
 
     def set_loading_more_progress(self):
-        self._window_bottom.clear()
-        self._window_bottom.addstr(0, 0, self.LOADING_MORE_RESULTS_CAPTION)
-        self._window_bottom.refresh()
+        self._message = self.LOADING_MORE_RESULTS_CAPTION
 
     def set_fetching_magnet_url(self):
-        self._window_bottom.clear()
-        self._window_bottom.addstr(0, 0, self.FETCHING_TORRENT_CAPTION)
-        self._window_bottom.refresh()
+        self._message = self.FETCHING_TORRENT_CAPTION
+
+    def set_action_complete(self):
+        self._message = None
 
     def _load_search_history(self):
         history = []
@@ -390,6 +396,10 @@ class ItemWindow(object):
         self._current_sort = self.SORT_SEEDERS
         self._current_sort_type = self.SORT_DESC
 
+        self._start_search_in_prg = False
+
+        logging.getLogger('bs4.dammit').setLevel(logging.ERROR)
+
     @property
     def items(self):
         return self._items
@@ -491,9 +501,13 @@ class ItemWindow(object):
             if start_search:
                 m = self.SEARCHING_FOR_CAPTION % start_search
             else:
-                m = self.START_SEARCH_CAPTION
+                if not self._start_search_in_prg:
+                    m = self.START_SEARCH_CAPTION
+                else:
+                    m = ''
             self._window.addstr(h // 2, w // 2 - len(m) // 2, m)
         elif not self._items:
+            self._window.clear()
             m = self.NOTHING_FOUND_CAPTION
             self._window.addstr(h // 2, w // 2 - len(m) // 2, m)
         else:
@@ -518,7 +532,6 @@ class ItemWindow(object):
                             ','.join([i.NAME for i in item.origins]),
                             source_max
                         ),
-                        # self._format_field(item.origin.NAME, source_max),
                         self._format_field(str(item.seeders), seeders_max),
                         self._format_field(str(item.leechers), leechers_max),
                         self._format_field(item.size, size_max)
@@ -527,7 +540,7 @@ class ItemWindow(object):
                 self._window.addstr(1 + index, 1, msg, mode | color)
 
             if max_items < h - 2:
-                for i in range(1, (h - 2) - max_items):
+                for i in range(1, (h - 2) - max_items + 1):
                     self._window.addstr(max_items + i, 1, ' ' * (w - 1))
 
     def resize(self):
@@ -546,6 +559,14 @@ class ItemWindow(object):
 
     def finish(self):
         self._window.clear()
+
+    def set_search_start(self,new_search=True):
+        self._start_search_in_prg = True
+        if new_search:
+            self._items = None
+
+    def set_search_end(self):
+        self._start_search_in_prg = False
 
     def _navigate(self, n):
         self._position += n
@@ -638,12 +659,26 @@ class ItemWindow(object):
 
 
 class App(object):
-    def __init__(self, screen, search='', loop=None):
+    class FetchTask(Task):
+        def __init__(self, loop, coro, search_term):
+            super().__init__(coro, loop=loop)
+            self.search_term = search_term
+
+    class FetchMagUrlTask(Task):
+        def __init__(self, loop, coro):
+            super().__init__(coro, loop=loop)
+
+    def __init__(self, screen, search=''):
         self._screen = screen
         self._start_search_str = search
-        self._loop = asyncio.get_event_loop() or loop
 
-        self._downloader = DlFacade()
+        self._init_search_in_prg = False
+
+        self._loop = self._mk_event_loop()
+        self._pending_tasks = []
+        self._lock = Lock()
+
+        self._downloader = DlFacade(self._loop)
 
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_GREEN)
         curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLACK)
@@ -667,19 +702,34 @@ class App(object):
 
         self._display()
 
+    def xxx(self, loop):
+        loop.run_forever()
+
+    def _mk_event_loop(self):
+        loop = asyncio.new_event_loop()
+        Thread(target=self.xxx, args=(loop,)).start()
+        return loop
+
     def _display(self):
         while True:
+            self._lock.acquire()
             self._draw()
 
             if self._start_search_str:
-                self._item_window.set_items(
+                if not self._init_search_in_prg:
                     self._fetch_results(self._start_search_str)
-                )
-                self._item_window.clear()
-                self._start_search_str = None
+                    self._item_window.clear()
+                    self._init_search_in_prg = True
                 key = -1
             else:
-                key = self._screen.getch()
+                if len(self._pending_tasks) == 0:
+                    key = self._screen.getch()
+                else:
+                    key = -1
+            self._lock.release()
+
+            if key == -1:
+                sleep(0.2)
 
             if self._bottom_bar.search_input:
                 self._bottom_bar.process_key(key)
@@ -700,6 +750,8 @@ class App(object):
         self._item_window.finish()
 
         curses.doupdate()
+
+        self._loop.call_soon_threadsafe(self._loop.stop)
 
     def _draw(self):
         h, w = self._screen.getmaxyx()
@@ -726,12 +778,6 @@ class App(object):
                     a0.append(len(','.join([i.NAME for i in item.origins])))
         a0.append(len(TopBar.SOURCE_CAPTION))
         source_max = max(a0)
-        # a = [
-        #     len(i.origin.NAME) for i in self._item_window.items
-        #     if type(i) is not ItemWindow.LoadMoreItem
-        # ] if self._item_window.items else []
-        # a.append(len(TopBar.SOURCE_CAPTION))
-        # source_max = max(a)
 
         no_len = len(str(len(self._item_window.items))) \
             if self._item_window.items else 0
@@ -743,28 +789,32 @@ class App(object):
         if title_length < 0:
             title_length = 0
 
-        self._item_window.draw(
-            h,
-            w,
-            no_len,
-            title_length,
-            source_max,
-            seeders_max,
-            leechers_max,
-            size_max,
-            self._start_search_str
-        )
-
-        if self._item_window.items:
-            self._top_bar.draw(
-                w, no_len, source_max, seeders_max, leechers_max, size_max
+        try:
+            self._item_window.draw(
+                h,
+                w,
+                no_len,
+                title_length,
+                source_max,
+                seeders_max,
+                leechers_max,
+                size_max,
+                self._start_search_str
             )
-        else:
-            self._top_bar.resize()
 
-        self._bottom_bar.draw()
+            if self._item_window.items:
+                self._top_bar.draw(
+                    w, no_len, source_max, seeders_max, leechers_max, size_max
+                )
+            else:
+                self._top_bar.resize()
 
-        self._engine_selection_win.draw()
+            self._bottom_bar.draw()
+
+            self._engine_selection_win.draw()
+        except Exception:
+            # Resize to bigger window during fetching - window.addstr() WTF ?
+            pass
 
         self._top_bar.refresh()
         self._item_window.refresh()
@@ -778,33 +828,59 @@ class App(object):
         self._bottom_bar.set_search_in_progress()
         self._item_window.refresh()
 
-        self._item_window.set_items(self._fetch_results(search_term))
+        self._fetch_results(search_term)
 
     def _process_screen_resize(self):
+        self._lock.acquire()
         self._top_bar.resize()
         self._bottom_bar.resize()
         self._item_window.resize()
         self._engine_selection_win.resize()
+        self._lock.release()
 
     def _create_selection_win(self):
         self._engine_selection_win.set_active(True)
 
     def _load_more_results(self):
         self._bottom_bar.set_loading_more_progress()
-        self._item_window.set_items(self._fetch_results(None), True)
+        self._fetch_results(None)
 
     def _fetch_results(self, search_term):
-        items = self._loop.run_until_complete(
-            self._downloader.fetch_pages(search_term)
+        self._item_window.set_search_start(search_term is not None)
+        future = asyncio.run_coroutine_threadsafe(
+            self._downloader.fetch_pages(search_term),
+            self._loop
         )
+        future.add_done_callback(
+            partial(self._on_fetch_pages, search_term=search_term)
+        )
+        self._pending_tasks.append(future)
 
+    def _on_fetch_pages(self, future, search_term):
         if cfg.FETCH_MISSING_MAGNET_LINKS:
-            self._loop.run_until_complete(
+            self._lock.acquire()
+            self._pending_tasks.remove(future)
+            items = future.result()
+            future = self.FetchTask(
+                self._loop,
                 self._downloader.fetch_magnet_links(
-                    items, cfg.FETCH_MAGNET_LINKS_CONCURRENCE
-                )
+                    items,
+                    cfg.FETCH_MAGNET_LINKS_CONCURRENCE
+                ),
+                search_term
             )
+            future.add_done_callback(self._on_fetch_magnet_urls)
+            self._pending_tasks.append(future)
+            self._lock.release()
+        else:
+            self._on_fetch_magnet_urls(future, search_term)
 
+    def _on_fetch_magnet_urls(self, future, search_term):
+        self._lock.acquire()
+        if future in self._pending_tasks:
+            self._pending_tasks.remove(future)
+
+        items = future.result()
         if cfg.AGGREGATE_SAME_MAGNET_LINKS:
             if search_term is not None:
                 items = self._downloader.aggregate_same_magnets(items)
@@ -813,20 +889,41 @@ class App(object):
                     self._item_window.items, items
                 )
 
-        return items
+        self._item_window.set_items(items, search_term is None)
+        self._bottom_bar.set_action_complete()
+        if self._start_search_str:
+            self._init_search_in_prg = False
+            self._start_search_str = None
+        self._item_window.set_search_end()
+
+        self._lock.release()
 
     def _fetch_magnet_url(self, item):
+        self._lock.acquire()
         self._bottom_bar.set_fetching_magnet_url()
 
         if item.magnet_url:
             core.run_torrent_client(item.magnet_url)
         else:
-            ml = asyncio.run(self._downloader.get_magnet_url(item))
-            if ml:
-                core.run_torrent_client(ml)
-            else:
-                # TODO magnurl error
-                pass
+            future = asyncio.run_coroutine_threadsafe(
+                self._downloader.get_magnet_url(item),
+                self._loop
+            )
+            future.add_done_callback(self._on_magnet_url_fetched)
+            self._pending_tasks.append(future)
+        self._lock.release()
+
+    def _on_magnet_url_fetched(self, future):
+        self._lock.acquire()
+        self._pending_tasks.remove(future)
+        self._bottom_bar.set_action_complete()
+        ml = future.result()
+        if ml:
+            core.run_torrent_client(ml)
+        else:
+            # TODO magnurl error
+            pass
+        self._lock.release()
 
     def _open_torrent_link(self, item):
         core.open_torrent_link(

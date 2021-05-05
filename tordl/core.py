@@ -38,7 +38,7 @@ def direct_download(st, loop=None):
     if not loop:
         loop = asyncio.get_event_loop()
 
-    dl = DlFacade()
+    dl = DlFacade(loop)
     print('Searching %s for "%s"...' % (','.join(cfg.SEARCH_ENGINES), st))
     results = loop.run_until_complete(dl.search(st))
     if results:
@@ -64,7 +64,7 @@ def test_search_engines(loop=None):
         loop = asyncio.get_event_loop()
 
     st = 'Star Wars'
-    dl = DlFacade()
+    dl = DlFacade(loop)
     es = dl.engines.values()
     test_results = []
     for e in es:
@@ -257,14 +257,16 @@ class BaseDl(object):
 
 class DlFacade(object):
     class GetMagnetUrlTask(Task):
-        def __init__(self, coro, search_result):
-            super().__init__(coro)
+        def __init__(self, loop, coro, search_result):
+            super().__init__(coro, loop=loop)
             self.search_result = search_result
 
     def __init__(
             self,
+            loop,
             dl_classes=None,
     ):
+        self._loop = loop
         if dl_classes:
             self._engines = {c: c() for c in dl_classes}
             self._all_engines = self._load_engines()[1]
@@ -289,7 +291,7 @@ class DlFacade(object):
         for dl in self._engines.values():
             tasks.append(dl.search(expression, new_search))
 
-        results, _ = await asyncio.wait(tasks)
+        results, _ = await asyncio.wait(tasks, loop=self._loop)
         result = []
         for r in results:
             r = r.result()
@@ -304,7 +306,7 @@ class DlFacade(object):
             coros.append(
                 self.search(search_term if i == 0 else None)
             )
-        done, _ = await asyncio.wait(coros)
+        done, _ = await asyncio.wait(coros, loop=self._loop)
         items = []
         for t in done:
             result = t.result()
@@ -358,6 +360,8 @@ class DlFacade(object):
 
         self._no_magnet_links = None
 
+        return search_results
+
     def _load_engines(self):
         loader = importlib.machinery.SourceFileLoader(
             'engines_mod', cfg.CFG_ENGINES_FILE
@@ -399,7 +403,7 @@ class DlFacade(object):
 
     def _create_ml_fetch_task(self, search_result):
         task = self.GetMagnetUrlTask(
-            self.get_magnet_url(search_result), search_result
+            self._loop, self.get_magnet_url(search_result), search_result
         )
         task.add_done_callback(self._on_fetch_magnet_done)
         self._ml_fetch_tasks.append(task)
