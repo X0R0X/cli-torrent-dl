@@ -220,7 +220,7 @@ class BottomBar(object):
     def _add_to_search_history(self, search_term):
         if search_term and (
                 not self._search_history or
-                self._search_term != self._search_history[-1]
+                search_term != self._search_history[-1]
         ):
             self._search_history.append(search_term)
 
