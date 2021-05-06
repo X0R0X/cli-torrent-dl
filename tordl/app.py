@@ -12,7 +12,7 @@ from time import sleep
 
 from tordl import config as cfg
 from tordl import core
-from tordl.core import SearchResult, DlFacade
+from tordl.core import SearchResult, DlFacade, SearchProgress
 
 
 class TopBar(object):
@@ -67,6 +67,7 @@ class BottomBar(object):
     SEARCH_IN_PROGRESS_CAPTION = 'Searching...'
     LOADING_MORE_RESULTS_CAPTION = 'Loading more results...'
     FETCHING_TORRENT_CAPTION = 'Fetching torrent...'
+    FETCHING_MAGNET_URLS = 'Fetching magnet urls...'
 
     def __init__(self, screen, search_fn, start_search):
         self._screen = screen
@@ -77,6 +78,7 @@ class BottomBar(object):
         self._search_cur_pos = 0
         self._delta_cur_pos = 0
         self._message = None
+        self._search_progress = None
 
         self._search_history = self._load_search_history()
         self._add_to_search_history(start_search)
@@ -193,7 +195,14 @@ class BottomBar(object):
         self._window_bottom.refresh()
 
         if self._message:
-            self._window_bottom.addstr(0, 0, self._message)
+            m = self._message
+            if self._search_progress:
+                m += ' %.1f%% [%d/%d]' % (
+                    self._search_progress.percent,
+                    self._search_progress.progress,
+                    self._search_progress.max_
+                )
+            self._window_bottom.addstr(0, 0, m)
 
     def refresh(self):
         self._window_bottom.refresh()
@@ -207,8 +216,15 @@ class BottomBar(object):
     def set_fetching_magnet_url(self):
         self._message = self.FETCHING_TORRENT_CAPTION
 
+    def set_fetching_magnet_urls(self):
+        self._message = self.FETCHING_MAGNET_URLS
+
     def set_action_complete(self):
         self._message = None
+        self._search_progress = None
+
+    def set_search_progress(self, search_progress):
+        self._search_progress = search_progress
 
     def _load_search_history(self):
         history = []
@@ -560,7 +576,7 @@ class ItemWindow(object):
     def finish(self):
         self._window.clear()
 
-    def set_search_start(self,new_search=True):
+    def set_search_start(self, new_search=True):
         self._start_search_in_prg = True
         if new_search:
             self._items = None
@@ -718,6 +734,7 @@ class App(object):
             if self._start_search_str:
                 if not self._init_search_in_prg:
                     self._fetch_results(self._start_search_str)
+                    self._bottom_bar.set_search_in_progress()
                     self._item_window.clear()
                     self._init_search_in_prg = True
                 key = -1
@@ -846,9 +863,16 @@ class App(object):
         self._fetch_results(None)
 
     def _fetch_results(self, search_term):
-        self._item_window.set_search_start(search_term is not None)
+        self._item_window.set_search_start(
+            search_term is not None
+        )
+        search_progress = SearchProgress()
+        self._bottom_bar.set_search_progress(search_progress)
         future = asyncio.run_coroutine_threadsafe(
-            self._downloader.fetch_pages(search_term),
+            self._downloader.fetch_pages(
+                search_term,
+                search_progress
+            ),
             self._loop
         )
         future.add_done_callback(
@@ -860,16 +884,22 @@ class App(object):
         if cfg.FETCH_MISSING_MAGNET_LINKS:
             self._lock.acquire()
             self._pending_tasks.remove(future)
-            items = future.result()
-            future = self.FetchTask(
-                self._loop,
+
+            search_progress = SearchProgress()
+            self._bottom_bar.set_fetching_magnet_urls()
+            self._bottom_bar.set_search_progress(search_progress)
+
+            future = asyncio.run_coroutine_threadsafe(
                 self._downloader.fetch_magnet_links(
-                    items,
-                    cfg.FETCH_MAGNET_LINKS_CONCURRENCE
+                    future.result(),
+                    cfg.FETCH_MAGNET_LINKS_CONCURRENCE,
+                    search_progress
                 ),
-                search_term
+                self._loop
             )
-            future.add_done_callback(self._on_fetch_magnet_urls)
+            future.add_done_callback(
+                partial(self._on_fetch_magnet_urls, search_term=search_term)
+            )
             self._pending_tasks.append(future)
             self._lock.release()
         else:

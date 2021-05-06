@@ -4,8 +4,9 @@ import inspect
 import json
 import subprocess
 import time
-from asyncio import Task, Event
+from asyncio import Task, Event, FIRST_COMPLETED
 from importlib import machinery, util
+from threading import Thread
 
 from aiohttp import ClientSession, ClientTimeout
 
@@ -129,14 +130,16 @@ def run_api(st, pretty_json=True, loop=None):
         loop = asyncio.get_event_loop()
 
     api = Api()
+
     sr = loop.run_until_complete(
         api.fetch_with_magnet_links(
             st,
             cfg.FETCH_MISSING_MAGNET_LINKS,
             cfg.AGGREGATE_SAME_MAGNET_LINKS,
-            cfg.FETCH_MAGNET_LINKS_CONCURRENCE,
+            cfg.FETCH_MAGNET_LINKS_CONCURRENCE
         )
     )
+
     print(api.mk_json_output(sr, pretty_json))
 
 
@@ -172,6 +175,26 @@ class SearchResult(object):
                 self.size_b = 0.0
 
 
+class SearchProgress(object):
+    def __init__(self):
+        self.max_ = 1
+        self._progress = 0
+        self._percent = 0.0
+
+    @property
+    def progress(self):
+        return self._progress
+
+    @progress.setter
+    def progress(self, val):
+        self._progress = val
+        self._percent = self._progress / self.max_ * 100
+
+    @property
+    def percent(self):
+        return self._percent
+
+
 class BaseDl(object):
     NAME = ''
     BASE_URL = None
@@ -183,8 +206,8 @@ class BaseDl(object):
         self._current_search = None
         self._headers = self._create_headers()
 
-    async def search(self, expression, new_search=False):
-        if expression is None and not new_search:
+    async def search(self, expression):
+        if expression is None:
             if not self.INDEXED:
                 return []
 
@@ -257,9 +280,10 @@ class BaseDl(object):
 
 class DlFacade(object):
     class GetMagnetUrlTask(Task):
-        def __init__(self, loop, coro, search_result):
+        def __init__(self, loop, coro, search_result, search_progress):
             super().__init__(coro, loop=loop)
             self.search_result = search_result
+            self.search_progress = search_progress
 
     def __init__(
             self,
@@ -286,12 +310,15 @@ class DlFacade(object):
     def all_engines(self):
         return self._all_engines
 
-    async def search(self, expression, new_search=False):
-        tasks = []
+    async def search(self, expression, search_progress=None):
+        coros = []
         for dl in self._engines.values():
-            tasks.append(dl.search(expression, new_search))
+            coros.append(dl.search(expression))
 
-        results, _ = await asyncio.wait(tasks, loop=self._loop)
+        if search_progress and search_progress.max_ == 1:
+            search_progress.max_ = len(self._engines.items())
+
+        results = await self._wait_with_progress(coros, search_progress)
         result = []
         for r in results:
             r = r.result()
@@ -300,13 +327,19 @@ class DlFacade(object):
 
         return result
 
-    async def fetch_pages(self, search_term):
+    async def fetch_pages(self, search_term, search_progress=None):
         coros = []
+        if search_progress:
+            search_progress.max_ = \
+                len(self._engines.items()) * cfg.PAGE_NUM_DOWNLOAD
+
         for i in range(cfg.PAGE_NUM_DOWNLOAD):
             coros.append(
-                self.search(search_term if i == 0 else None)
+                self.search(search_term if i == 0 else None, search_progress)
             )
-        done, _ = await asyncio.wait(coros, loop=self._loop)
+
+        done = await self._wait_with_progress(coros)
+
         items = []
         for t in done:
             result = t.result()
@@ -337,11 +370,13 @@ class DlFacade(object):
         e = self._engines[search_result.origins[0]]
         return await e.get_magnet_url(search_result)
 
-    async def fetch_magnet_links(self, search_results, concurrent=20):
+    async def fetch_magnet_links(
+            self, search_results, concurrent=20, search_progress=None
+    ):
         if self._no_magnet_links is not None:
             raise RuntimeError('Magnetlink fetch in progress.')
 
-        self._mls_fetched.clear()
+        self._mls_fetched = Event()
         self._no_magnet_links = []
         self._ml_fetch_tasks = []
 
@@ -350,11 +385,13 @@ class DlFacade(object):
                 self._no_magnet_links.append(sr)
 
         ln = len(self._no_magnet_links)
+        if search_progress:
+            search_progress.max_ = ln
         max_ = min(concurrent, ln)
         self._ml_fetch_counter = max_ - 1
         for i in range(0, max_):
             sr = self._no_magnet_links[i]
-            self._create_ml_fetch_task(sr)
+            self._create_ml_fetch_task(sr, search_progress)
 
         await self._mls_fetched.wait()
 
@@ -393,20 +430,46 @@ class DlFacade(object):
         self._ml_fetch_tasks.remove(task)
 
         self._ml_fetch_counter += 1
+
+        if task.search_progress:
+            task.search_progress.progress += 1
+
         if self._ml_fetch_counter < len(self._no_magnet_links):
             self._create_ml_fetch_task(
-                self._no_magnet_links[self._ml_fetch_counter]
+                self._no_magnet_links[self._ml_fetch_counter],
+                task.search_progress
             )
 
         if len(self._ml_fetch_tasks) == 0:
             self._mls_fetched.set()
 
-    def _create_ml_fetch_task(self, search_result):
+    def _create_ml_fetch_task(self, search_result, search_progress=None):
         task = self.GetMagnetUrlTask(
-            self._loop, self.get_magnet_url(search_result), search_result
+            self._loop,
+            self.get_magnet_url(search_result),
+            search_result,
+            search_progress
         )
         task.add_done_callback(self._on_fetch_magnet_done)
         self._ml_fetch_tasks.append(task)
+
+    async def _wait_with_progress(self, coros, search_progress=None):
+        done, pending = await asyncio.wait(
+            coros, loop=self._loop, return_when=FIRST_COMPLETED
+        )
+        done = list(done)
+        if search_progress:
+            search_progress.progress += len(done)
+
+        while pending:
+            done_, pending = await asyncio.wait(
+                pending, loop=self._loop, return_when=FIRST_COMPLETED
+            )
+            done.extend(done_)
+            if search_progress:
+                search_progress.progress += len(done_)
+
+        return done
 
 
 class Api(object):
@@ -418,9 +481,12 @@ class Api(object):
             search_term,
             fetch_missing_magnet_links=True,
             aggregate_same_magnet_links=True,
-            concurrent=20
+            concurrent=20,
+            search_progress=None
     ):
-        search_results = await self._dl.fetch_pages(search_term)
+        search_results = await self._dl.fetch_pages(
+            search_term, search_progress
+        )
 
         if fetch_missing_magnet_links:
             await self._dl.fetch_magnet_links(

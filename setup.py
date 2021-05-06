@@ -3,7 +3,7 @@ from distutils.core import setup
 setup(
     name='tordl',
     packages=['tordl'],
-    version='1.04',
+    version='1.06',
     license='MIT',
     description='CLI Torrent Search and Download',
     author='x0r0x',
