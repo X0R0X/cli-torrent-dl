@@ -690,7 +690,7 @@ class App(object):
 
         self._init_search_in_prg = False
 
-        self._loop = self._mk_event_loop()
+        self._loop, self._loop_thread = self._mk_event_loop()
         self._pending_tasks = []
         self._lock = Lock()
 
@@ -718,13 +718,11 @@ class App(object):
 
         self._display()
 
-    def xxx(self, loop):
-        loop.run_forever()
-
     def _mk_event_loop(self):
         loop = asyncio.new_event_loop()
-        Thread(target=self.xxx, args=(loop,)).start()
-        return loop
+        t = Thread(target=loop.run_forever)
+        t.start()
+        return loop, t
 
     def _display(self):
         while True:
@@ -769,6 +767,7 @@ class App(object):
         curses.doupdate()
 
         self._loop.call_soon_threadsafe(self._loop.stop)
+        self._loop_thread.join()
 
     def _draw(self):
         h, w = self._screen.getmaxyx()
