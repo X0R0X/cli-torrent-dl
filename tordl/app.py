@@ -169,6 +169,7 @@ class BottomBar(object):
     def set_search(self, is_search=True):
         if is_search:
             self._search_term = ''
+            self._delta_cur_pos = 0
         self._search_input = is_search
 
     def draw(self):
