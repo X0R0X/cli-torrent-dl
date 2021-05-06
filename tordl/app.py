@@ -929,17 +929,18 @@ class App(object):
 
     def _fetch_magnet_url(self, item):
         self._lock.acquire()
-        self._bottom_bar.set_fetching_magnet_url()
 
         if item.magnet_url:
             core.run_torrent_client(item.magnet_url)
         else:
+            self._bottom_bar.set_fetching_magnet_url()
             future = asyncio.run_coroutine_threadsafe(
                 self._downloader.get_magnet_url(item),
                 self._loop
             )
             future.add_done_callback(self._on_magnet_url_fetched)
             self._pending_tasks.append(future)
+
         self._lock.release()
 
     def _on_magnet_url_fetched(self, future):
@@ -952,6 +953,7 @@ class App(object):
         else:
             # TODO magnurl error
             pass
+        self._bottom_bar.set_action_complete()
         self._lock.release()
 
     def _open_torrent_link(self, item):
