@@ -5,6 +5,7 @@ import os
 import string
 from asyncio import Task
 from collections import deque
+from concurrent.futures._base import CancelledError
 from curses import ascii
 from functools import partial
 from threading import Thread, Lock
@@ -696,6 +697,8 @@ class App(object):
 
         self._downloader = DlFacade(self._loop)
 
+        self._should_exit = False
+
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_GREEN)
         curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLACK)
         curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_BLACK)
@@ -725,46 +728,54 @@ class App(object):
         return loop, t
 
     def _display(self):
-        while True:
-            self._lock.acquire()
-            self._draw()
+        while not self._should_exit:
+            try:
+                self._lock.acquire()
+                self._draw()
 
-            if self._start_search_str:
-                if not self._init_search_in_prg:
-                    self._fetch_results(self._start_search_str)
-                    self._bottom_bar.set_search_in_progress()
-                    self._item_window.clear()
-                    self._init_search_in_prg = True
-                key = -1
-            else:
-                if len(self._pending_tasks) == 0:
-                    key = self._screen.getch()
-                else:
+                if self._start_search_str:
+                    if not self._init_search_in_prg:
+                        self._fetch_results(self._start_search_str)
+                        self._bottom_bar.set_search_in_progress()
+                        self._item_window.clear()
+                        self._init_search_in_prg = True
                     key = -1
-            self._lock.release()
+                else:
+                    if len(self._pending_tasks) == 0:
+                        key = self._screen.getch()
+                    else:
+                        key = -1
+                self._lock.release()
 
-            if key == -1:
-                sleep(0.2)
+                if key == -1:
+                    sleep(0.2)
 
-            if self._bottom_bar.search_input:
-                self._bottom_bar.process_key(key)
-            elif self._engine_selection_win.active:
-                self._engine_selection_win.process_key(key)
-                if not self._engine_selection_win.active:
-                    self._item_window.clear()
-            else:
-                do_exit = self._item_window.process_key(key)
-                if do_exit:
-                    break
+                if self._bottom_bar.search_input:
+                    self._bottom_bar.process_key(key)
+                elif self._engine_selection_win.active:
+                    self._engine_selection_win.process_key(key)
+                    if not self._engine_selection_win.active:
+                        self._item_window.clear()
+                else:
+                    self._should_exit = self._item_window.process_key(key)
 
-            if key == curses.KEY_RESIZE:
-                self._process_screen_resize()
+                if key == curses.KEY_RESIZE:
+                    self._process_screen_resize()
 
+            except KeyboardInterrupt:
+                self._should_exit = True
         self._top_bar.finish()
         self._bottom_bar.finish()
         self._item_window.finish()
 
         curses.doupdate()
+
+        if asyncio.all_tasks(self._loop):
+            for p in self._pending_tasks:
+                self._loop.call_soon_threadsafe(p.cancel)
+
+        while asyncio.all_tasks(self._loop):
+            sleep(0.1)
 
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._loop_thread.join()
@@ -908,8 +919,11 @@ class App(object):
         self._lock.acquire()
         if future in self._pending_tasks:
             self._pending_tasks.remove(future)
+        try:
+            items = future.result()
+        except CancelledError:
+            items = []
 
-        items = future.result()
         if cfg.AGGREGATE_SAME_MAGNET_LINKS:
             if search_term is not None:
                 items = self._downloader.aggregate_same_magnets(items)
@@ -924,7 +938,6 @@ class App(object):
             self._init_search_in_prg = False
             self._start_search_str = None
         self._item_window.set_search_end()
-
         self._lock.release()
 
     def _fetch_magnet_url(self, item):
@@ -947,7 +960,11 @@ class App(object):
         self._lock.acquire()
         self._pending_tasks.remove(future)
         self._bottom_bar.set_action_complete()
-        ml = future.result()
+        try:
+            ml = future.result()
+        except CancelledError:
+            ml = None
+
         if ml:
             core.run_torrent_client(ml)
         else:
