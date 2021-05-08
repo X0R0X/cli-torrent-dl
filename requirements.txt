@@ -16,7 +16,6 @@ jeepney==0.6.0
 keyring==23.0.1
 multidict==5.1.0
 packaging==20.9
-pkg-resources==0.0.0
 pkginfo==1.7.0
 pycparser==2.20
 Pygments==2.8.1
@@ -27,6 +26,7 @@ requests==2.25.1
 requests-toolbelt==0.9.1
 rfc3986==1.4.0
 SecretStorage==3.3.1
+setuptools==56.1.0
 six==1.15.0
 soupsieve==2.2.1
 tqdm==4.60.0
