@@ -2,7 +2,6 @@
 set -euo pipefail
 
 VENV_DIR="$HOME/.torrent_dl/.venv"
-[[ -d $VENV_DIR ]] || exit 1
 
 # get path of this script, resolving all symlinks.
 SOURCE="${BASH_SOURCE[0]}"
@@ -13,6 +12,7 @@ while [[ -h $SOURCE ]]; do
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
 
+mkdir -p "$VENV_DIR"
+virtualenv "$VENV_DIR"
 . "$VENV_DIR/bin/activate"
-python3 "$SCRIPT_DIR/tordl.py" $@
-deactivate
+pip3 install -r "$SCRIPT_DIR/requirements.txt"
