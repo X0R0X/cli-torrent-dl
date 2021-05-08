@@ -109,7 +109,7 @@ def parse_args():
         '-g',
         '--dont-aggregate-same-magnet-links',
         dest='cfg_aggregate_same_magnet_links',
-        default=not cfg.AGGREGATE_SAME_MAGNET_LINKS,
+        default=cfg.AGGREGATE_SAME_MAGNET_LINKS,
         action='store_false',
         help='If the magnet link of two search result is the same, aggregate it'
              ' to one record. Consider using --fetch-missing-magnet-links.'
