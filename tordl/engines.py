@@ -398,7 +398,7 @@ class NyaaTracker(BaseDl):
                     a.decompose()
                 a = tds[0].find('a')
                 name = a.attrs['title']
-                link = self.BASE_URL + a.attrs['href']
+                link = a.attrs['href']
                 magnet_url = tds[1].findAll('a')[1].attrs['href']
                 # Site uses binary prefixes.
                 # Should calculate proper sizes at some point.
