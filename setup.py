@@ -1,9 +1,20 @@
-from distutils.core import setup
+from pathlib import Path
+from setuptools import find_packages, setup
+
+def load_requirements():
+    return [
+        l.strip()
+        for l in Path('requirements.txt').read_text().splitlines()
+        if not l.startswith('#')
+    ]
 
 setup(
     name='tordl',
-    packages=['tordl'],
-    version='1.06',
+    packages=find_packages(where='tordl'),
+    package_dir={
+        '': 'tordl'
+    },
+    version='1.0.6',
     license='MIT',
     description='CLI Torrent Search and Download',
     author='x0r0x',
@@ -11,22 +22,7 @@ setup(
     url='https://github.com/X0R0X/cli-torrent-dl/',
     download_url='https://github.com/X0R0X/cli-torrent-dl/archive/refs/heads/master.zip',
     keywords=['torrent', 'search', 'download', 'cli', 'curses'],
-    install_requires=[
-        'aiohttp==3.7.4.post0',
-        'async-timeout==3.0.1',
-        'attrs==20.3.0',
-        'beautifulsoup4==4.9.3',
-        'bs4==0.0.1',
-        'chardet==4.0.0',
-        'idna==3.1',
-        'multidict==5.1.0',
-        'soupsieve==2.2.1',
-        'setuptools==56.1.0',
-        'typing-extensions==3.7.4.3',
-        'yarl==1.6.3',
-        'aiohttp==3.7.4.post0',
-        'beautifulsoup4',
-    ],
+    install_requires=load_requirements(),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: End Users/Desktop',

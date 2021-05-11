@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VENV_DIR="$HOME/.torrent_dl/.venv"
+VENV_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/torrentdl/.venv"
 
 # get path of this script, resolving all symlinks.
 SOURCE="${BASH_SOURCE[0]}"
