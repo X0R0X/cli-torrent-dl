@@ -13,13 +13,11 @@ SolidTorrents by default) through command line.
 
 #### Installation   
 
-    $ virtualenv .venv38
-    $ . .venv/bin/activate
-    $ pip3 install -r requirements.txt
+    $ ./setup_venv.sh
 
 optional:
 
-    $ sudo ln -s tordl.sh /usr/local/bin
+    $ sudo ln -s tordl.sh /usr/local/bin/tordl
 
 #### Config
 Edit `~/.torrent_dl/config.json` to customize your preferred torrent client and 
