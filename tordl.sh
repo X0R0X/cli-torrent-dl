@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VENV_DIR="$HOME/.torrent_dl/.venv"
+VENV_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/torrentdl/.venv"
 [[ -d $VENV_DIR ]] || exit 1
 
 # get path of this script, resolving all symlinks.
@@ -14,5 +14,5 @@ done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
 
 . "$VENV_DIR/bin/activate"
-python3 "$SCRIPT_DIR/tordl.py" $@
+python3 "$SCRIPT_DIR/tordl.py" "$@"
 deactivate
