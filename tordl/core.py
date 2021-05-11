@@ -79,7 +79,7 @@ def test_search_engines(loop=None):
         t = time.time()
         results = loop.run_until_complete(e.search(st))
         t = time.time() - t
-        if len(results) > 0:
+        if results and len(results) > 0:
             print('  - Search results (%d) fetched.' % len(results))
             r = results[0]
             if not r.name:
@@ -385,15 +385,16 @@ class DlFacade(object):
                 self._no_magnet_links.append(sr)
 
         ln = len(self._no_magnet_links)
-        if search_progress:
-            search_progress.max_ = ln
-        max_ = min(concurrent, ln)
-        self._ml_fetch_counter = max_ - 1
-        for i in range(0, max_):
-            sr = self._no_magnet_links[i]
-            self._create_ml_fetch_task(sr, search_progress)
+        if ln > 0:
+            if search_progress:
+                search_progress.max_ = ln
+            max_ = min(concurrent, ln)
+            self._ml_fetch_counter = max_ - 1
+            for i in range(0, max_):
+                sr = self._no_magnet_links[i]
+                self._create_ml_fetch_task(sr, search_progress)
 
-        await self._mls_fetched.wait()
+            await self._mls_fetched.wait()
 
         self._no_magnet_links = None
 
