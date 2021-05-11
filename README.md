@@ -28,7 +28,7 @@ browser (default is qbittorent and firefox).
 ##### CLI Usage
 Run search from command line:
 
-    $ tordl star wars IV
+    $ tordl debian 8
 
 Show help:
 
