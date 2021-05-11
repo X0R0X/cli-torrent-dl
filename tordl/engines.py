@@ -380,10 +380,14 @@ class Dl1337xto(BaseDl):
 class NyaaTracker(BaseDl):
     NAME = 'Nyaa'
     BASE_URL = 'https://nyaa.si'
-    SEARCH_URL = '%s/?f=0&c=0_0&q=%s&p=%s' % (BASE_URL, '%s', '%s')
+    SEARCH_URL = '%s/?f=0&c=0_0&q=%s&p=%s&s=seeders&o=desc' % (
+        BASE_URL, '%s', '%s'
+    )
 
     def _mk_search_url(self, expression):
-        return self.SEARCH_URL % (expression.replace(' ', '+'), str(self._current_index))
+        return self.SEARCH_URL % (
+            expression.replace(' ', '+'), str(self._current_index)
+        )
 
     def _process_search(self, response):
         bs = BeautifulSoup(response, features='html.parser')
@@ -428,48 +432,9 @@ class NyaaTracker(BaseDl):
         pass
 
 
-class SukebeiNyaa(BaseDl):
+class SukebeiNyaa(NyaaTracker):
     NAME = 'Sukebei'
     BASE_URL = 'https://sukebei.nyaa.si'
-    SEARCH_URL = '%s/?f=0&c=0_0&q=%s&p=%s' % (BASE_URL, '%s', '%s')
-
-    def _mk_search_url(self, expression):
-        return self.SEARCH_URL % (expression.replace(' ', '+'), str(self._current_index))
-
-    def _process_search(self, response):
-        bs = BeautifulSoup(response, features='html.parser')
-        result = []
-        try:
-            trs = bs.find('tbody').findAll('tr')
-            for tr in trs:
-                tds = tr.findAll('td')[1:]
-                for a in tds[0].findAll(class_='comments'):
-                    a.decompose()
-                a = tds[0].find('a')
-                name = a.attrs['title']
-                link = a.attrs['href']
-                magnet_url = tds[1].findAll('a')[1].attrs['href']
-                size = tds[2].text.replace('i', '')
-                seeders = int(tds[4].text)
-                leechers = int(tds[5].text)
-                result.append(
-                    SearchResult(
-                        type(self),
-                        name,
-                        link,
-                        seeders,
-                        leechers,
-                        size,
-                        magnet_url
-                    )
-                )
-        except Exception:
-            pass
-
-        return result
-
-    def _mk_magnet_url(self, link):
-        pass
-
-    def _process_magnet_link(self, response):
-        pass
+    SEARCH_URL = '%s/?f=0&c=0_0&q=%s&p=%s&s=seeders&o=desc' % (
+        BASE_URL, '%s', '%s'
+    )
