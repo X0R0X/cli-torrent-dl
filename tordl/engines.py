@@ -438,3 +438,52 @@ class SukebeiNyaa(NyaaTracker):
     SEARCH_URL = '%s/?f=0&c=0_0&q=%s&p=%s&s=seeders&o=desc' % (
         BASE_URL, '%s', '%s'
     )
+
+class TorrentGalaxy(BaseDl):
+    NAME = 'TGx'
+    BASE_URL = 'https://torrentgalaxy.to'
+    SEARCH_URL = '%s/torrents.php?search=%s&sort=seeders&order=desc&page=%s' % (
+        BASE_URL, '%s', '%s'
+    )
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (
+            expression.replace(' ', '+'), str(self._current_index)
+        )
+
+    def _process_search(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        result = []
+        try:
+            rows = bs.findAll('div', class_='tgxtablerow')
+            for r in rows:
+                cells = r.findAll('div', class_='tgxtablecell')[3:]
+                a = cells[0].findAll('a')[0]
+                name = a.attrs['title']
+                link = a.attrs['href']
+                magnet_url = cells[1].findAll('a')[1].attrs['href']
+                size = cells[4].find('span').text
+                bs = cells[7].findAll('b')
+                seeders = bs[0]
+                leechers = bs[1]
+                result.append(
+                    SearchResult(
+                        type(self),
+                        name,
+                        link,
+                        seeders,
+                        leechers,
+                        size,
+                        magnet_url
+                    )
+                )
+        except Exception:
+            pass
+
+        return result
+
+    def _mk_magnet_url(self, link):
+        pass
+
+    def _process_magnet_link(self, response):
+        pass
