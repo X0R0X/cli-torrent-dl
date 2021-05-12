@@ -64,7 +64,9 @@ def test_search_engines(loop=None):
     if not loop:
         loop = asyncio.get_event_loop()
 
-    st = 'Star Wars'
+    # Because we also introduced some 'adult' trackers, this is the most sane
+    # thing to search for. In the end, it's the internet, right ?
+    st = 'xxx'
     dl = DlFacade(loop)
     es = dl.engines.values()
     test_results = []
@@ -85,13 +87,13 @@ def test_search_engines(loop=None):
             if not r.name:
                 error = True
                 print('  - ERROR: Name not found !')
-            if not r.links[0] and not r.magnet_url:
+            if not r.links and not r.magnet_url:
                 error = True
                 print('  - ERROR: Link not found !')
-            if not r.seeders:
+            if r.seeders is None:
                 error = True
                 print('  - ERROR: Seeders not found !')
-            if not r.leechers:
+            if r.leechers is None:
                 error = True
                 print('  - ERROR: Leechers not found !')
             if not r.size:
