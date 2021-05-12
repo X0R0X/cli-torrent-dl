@@ -458,7 +458,7 @@ class TorrentGalaxy(BaseDl):
             rows = bs.findAll('div', class_='tgxtablerow')
             for r in rows:
                 cells = r.findAll('div', class_='tgxtablecell')[3:]
-                a = cells[0].findAll('a')[0]
+                a = cells[0].find('a')
                 name = a.attrs['title']
                 link = a.attrs['href']
                 magnet_url = cells[1].findAll('a')[1].attrs['href']
