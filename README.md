@@ -15,12 +15,17 @@ SolidTorrents by default) through command line.
 
     $ ./setup_venv.sh
 
-optional:
+##### Recommended:
 
     $ sudo ln -s tordl.sh /usr/local/bin/tordl
+    
+or
+
+    # make sure $HOME/.local/bin is added to $PATH.
+    $ ln -s tordl.sh ~/.local/bin/tordl
 
 #### Config
-Edit `~/.torrent_dl/config.json` to customize your preferred torrent client and 
+Edit `~/.config/torrentdl/config.json` to customize your preferred torrent client and 
 browser (default is qbittorent and firefox).
 
 #### Usage
@@ -61,4 +66,4 @@ Show help:
 * BUTTON_SAVE - Persist selection in config and exit engine selection
 
 #### Creating own search engine extensions
-See `~/.torrent_dl/engines.py` and `~/.torrent_dl/config.json#search_engines`.
+See `~/.config/torrentdl/engines.py` and `~/.config/torrentdl/config.json#search_engines`.
