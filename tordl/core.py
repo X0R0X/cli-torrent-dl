@@ -147,7 +147,7 @@ def run_api(st, pretty_json=True, loop=None):
 
 class SearchResult(object):
     def __init__(
-            self, origin, name, link, seeders, leechers, size, magnet_url=None
+            self, origin, name, link, seeders: int, leechers: int, size, magnet_url=None
     ):
         self.origins = [origin]
         self.links = [link]
