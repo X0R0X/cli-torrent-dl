@@ -439,6 +439,7 @@ class SukebeiNyaa(NyaaTracker):
         BASE_URL, '%s', '%s'
     )
 
+
 class TorrentGalaxy(BaseDl):
     NAME = 'TGx'
     BASE_URL = 'https://torrentgalaxy.to'
@@ -464,8 +465,8 @@ class TorrentGalaxy(BaseDl):
                 magnet_url = cells[1].findAll('a')[1].attrs['href']
                 size = cells[4].find('span').text
                 bs = cells[7].findAll('b')
-                seeders = bs[0]
-                leechers = bs[1]
+                seeders = int(bs[0].text)
+                leechers = int(bs[1].text)
                 result.append(
                     SearchResult(
                         type(self),
