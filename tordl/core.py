@@ -6,7 +6,6 @@ import subprocess
 import time
 from asyncio import Task, Event, FIRST_COMPLETED
 from importlib import machinery, util
-from threading import Thread
 
 from aiohttp import ClientSession, ClientTimeout
 
@@ -147,13 +146,13 @@ def run_api(st, pretty_json=True, loop=None):
 
 class SearchResult(object):
     def __init__(
-            self, origin, name, link, seeders: int, leechers: int, size, magnet_url=None
+            self, origin, name, link, seeders, leechers, size, magnet_url=None
     ):
-        self.origins = [origin]
+        self.origins = [type(origin)]
         self.links = [link]
         self.name = name.encode('ascii', 'ignore').decode()
-        self.seeders = seeders
-        self.leechers = leechers
+        self.seeders = int(seeders)
+        self.leechers = int(leechers)
         self.size = size.replace(' ', '').encode('ascii', 'ignore').decode()
         self.magnet_url = magnet_url
 

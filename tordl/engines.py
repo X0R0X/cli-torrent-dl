@@ -25,7 +25,7 @@ class SolidTorrents(BaseDl):
                 swarm = o['swarm']
                 result.append(
                     SearchResult(
-                        type(self),
+                        self,
                         o['title'],
                         '/search?q=%s' %
                         self._current_search,
@@ -83,13 +83,13 @@ class KickAssTorrents(BaseDl):
             for tr in trs:
                 link = tr.find(class_='cellMainLink').attrs['href']
                 size = tr.find(class_='nobr center').text.replace('\n', '')
-                seeders = int(tr.find(class_='green center').text)
-                leechers = int(tr.find(class_='red lasttd center').text)
+                seeders = tr.find(class_='green center').text
+                leechers = tr.find(class_='red lasttd center').text
                 name = tr.find(class_='cellMainLink').text.replace('\n', ''). \
                     strip()
                 result.append(
                     SearchResult(
-                        type(self), name, link, seeders, leechers, size
+                        self, name, link, seeders, leechers, size
                     )
                 )
         except Exception:
@@ -131,11 +131,11 @@ class GloTorrents(BaseDl):
                     link = a.attrs['href']
                     magnet_url = c2[1].find('a').attrs['href']
                     size = c1[2].text
-                    seeders = int(c2[2].find('b').text.replace(',', ''))
-                    leechers = int(c1[3].find('b').text.replace(',', ''))
+                    seeders = c2[2].find('b').text.replace(',', '')
+                    leechers = c1[3].find('b').text.replace(',', '')
                     result.append(
                         SearchResult(
-                            type(self),
+                            self,
                             name,
                             link,
                             seeders,
@@ -199,7 +199,7 @@ class ZooqleCom(BaseDl):
                 leechers = self._get_from_cls(tr, self._l_cls)
                 result.append(
                     SearchResult(
-                        type(self),
+                        self,
                         name,
                         link,
                         seeders,
@@ -217,8 +217,8 @@ class ZooqleCom(BaseDl):
     def _get_from_cls(self, tr, cls):
         for c in cls:
             try:
-                seeders = int(tr.find(class_=c).text)
-                return seeders
+                peer_num = int(tr.find(class_=c).text)
+                return peer_num
             except Exception:
                 pass
 
@@ -250,13 +250,13 @@ class TpbParty(BaseDl):
                 link = '/%s' % '/'.join(a.attrs['href'].split('/')[3:])
                 tds = tr.findAll('td')
                 magnet_url = tds[1].findAll('a')[1].attrs['href']
-                seeders = int(tds[2].text)
-                leeches = int(tds[3].text)
+                seeders = tds[2].text
+                leeches = tds[3].text
                 size = tr.find(class_='detDesc').text.split(',')[1]
                 size = size.replace('Size ', '').replace('i', '')
                 result.append(
                     SearchResult(
-                        type(self),
+                        self,
                         name,
                         link,
                         seeders,
@@ -299,13 +299,11 @@ class LimeTorrents(BaseDl):
                 name = a.string
                 link = a.attrs['href']
                 size = tr.findAll(class_='tdnormal')[1].string
-                seeders = int(tr.find(class_='tdseed').string.replace(',', ''))
-                leechers = int(
-                    tr.find(class_='tdleech').string.replace(',', '')
-                )
+                seeders = tr.find(class_='tdseed').string.replace(',', '')
+                leechers = tr.find(class_='tdleech').string.replace(',', '')
                 result.append(
                     SearchResult(
-                        type(self), name, link, seeders, leechers, size
+                        self, name, link, seeders, leechers, size
                     )
                 )
         except Exception:
@@ -348,13 +346,13 @@ class Dl1337xto(BaseDl):
                 name = a.string
                 link = a.attrs['href']
 
-                seeders = int(tds[1].string)
-                leechers = int(tds[2].string)
+                seeders = tds[1].string
+                leechers = tds[2].string
                 size = '%sB' % tds[4].text.split('B')[0]
 
                 result.append(
                     SearchResult(
-                        type(self), name, link, seeders, leechers, size
+                        self, name, link, seeders, leechers, size
                     )
                 )
         except Exception:
@@ -407,11 +405,11 @@ class NyaaTracker(BaseDl):
                 # Site uses binary prefixes.
                 # Should calculate proper sizes at some point.
                 size = tds[2].text.replace('i', '')
-                seeders = int(tds[4].text)
-                leechers = int(tds[5].text)
+                seeders = tds[4].text
+                leechers = tds[5].text
                 result.append(
                     SearchResult(
-                        type(self),
+                        self,
                         name,
                         link,
                         seeders,
@@ -465,11 +463,11 @@ class TorrentGalaxy(BaseDl):
                 magnet_url = cells[1].findAll('a')[1].attrs['href']
                 size = cells[4].find('span').text
                 bs = cells[7].findAll('b')
-                seeders = int(bs[0].text)
-                leechers = int(bs[1].text)
+                seeders = bs[0].text
+                leechers = bs[1].text
                 result.append(
                     SearchResult(
-                        type(self),
+                        self,
                         name,
                         link,
                         seeders,
@@ -518,11 +516,11 @@ class BT4G(BaseDl):
                     s.decompose()
                 spans = r.findAll('span')[3:]
                 size = spans[0].find('b').text
-                seeders = int(spans[1].find('b').text)
-                leechers = int(spans[2].find('b').text)
+                seeders = spans[1].find('b').text
+                leechers = spans[2].find('b').text
                 result.append(
                     SearchResult(
-                        type(self),
+                        self,
                         name,
                         link,
                         seeders,
