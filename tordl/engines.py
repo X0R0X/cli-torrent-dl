@@ -2,6 +2,8 @@ import json
 
 from bs4 import BeautifulSoup
 
+from urllib.parse import urlencode
+
 from tordl.core import BaseDl, SearchResult
 
 
@@ -508,16 +510,72 @@ class BT4G(BaseDl):
                 a = r.find('h5').find('a')
                 name = a.attrs['title']
                 link = a.attrs['href']
-                # Probably the easiest way to do this.
-                magnet_url = 'magnet:?xt=urn:btih:%s&dn=%s' % (
-                    link.lstrip('/magnet/'), name.replace(' ', '+')
-                )
+                magnet_url = self._assemble_magnet(link.lstrip('/magnet/'), name)
+
                 for s in r.findAll('span', class_='lightColor'):
                     s.decompose()
                 spans = r.findAll('span')[3:]
                 size = spans[0].find('b').text
                 seeders = spans[1].find('b').text
                 leechers = spans[2].find('b').text
+
+                result.append(
+                    SearchResult(
+                        self,
+                        name,
+                        link,
+                        seeders,
+                        leechers,
+                        size,
+                        magnet_url
+                    )
+                )
+        except Exception:
+            pass
+
+        return result
+
+    def _assemble_magnet(self, ih, dn):
+        # Probably the easiest way to do this.
+        params = {'xt': 'urn:btih:%s' % ih, 'dn': dn}
+        ps = urlencode(params)
+        return 'magnet:?%s' % ps
+
+    def _mk_magnet_url(self, link):
+        pass
+
+    def _process_magnet_link(self, response):
+        pass
+
+
+class BTDB(BaseDl):
+    NAME = 'BTDB'
+    BASE_URL = 'https://btdb.eu'
+    SEARCH_URL = '%s/search/%s/0/?sort=popular&page=%s' % (BASE_URL, '%s', '%s')
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (expression, str(self._current_index))
+
+    def _process_search(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        result = []
+        try:
+            divs = bs.findAll('div', class_='media')
+            for d in divs:
+                mb = d.find('div', class_='media-body')
+
+                a = d.find(class_='item-title').find('a')
+                name = a.attrs['title']
+                link = a.attrs['href'].replace('//btdb.eu', '')
+
+                info = mb.find('div', class_='item-meta-info').findAll('small')
+                size = info[0].find('strong').text
+                seeders = info[2].find('strong').text
+                leechers = info[3].find('strong').text
+
+                mr = d.find('div', class_='media-right')
+                magnet_url = mr.find('a', class_='btn-success').attrs['href']
+
                 result.append(
                     SearchResult(
                         self,
