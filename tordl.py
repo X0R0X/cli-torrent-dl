@@ -142,6 +142,23 @@ def parse_args():
         help='If --fetch-missing-magnet-links is turned on, tordl will be '
              'fetching N magnet links concurrently to speed up the process.'
     )
+    ap.add_argument(
+        '--exclude-search-off',
+        dest='cfg_use_exclude_search',
+        default=cfg.USE_EXCLUDE_SEARCH,
+        action='store_false',
+        help='Switch exclude search off. Exclude search enables You to filter '
+             'out results containing excluded strings. Example: "tordl debian '
+             '{d}8.0.0 {d}8.0.1"'.format(d=cfg.EXCLUDE_SEARCH_DELIMITER)
+    )
+    ap.add_argument(
+        '--exclude-search-delimiter',
+        dest='cfg_exclude_search-delimiter',
+        default=cfg.EXCLUDE_SEARCH_DELIMITER,
+        type=str,
+        help='After this character sequence the next string is considered to be'
+             ' excluded from search result.'
+    )
     parsed = ap.parse_args(sys.argv[1:])
     return parsed
 

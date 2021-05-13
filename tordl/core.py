@@ -251,6 +251,8 @@ class DlFacade(object):
         self._mls_fetched = Event()
         self._ml_fetch_tasks = None
 
+        self._last_exclude = None
+
     @property
     def engines(self):
         return self._engines
@@ -260,6 +262,17 @@ class DlFacade(object):
         return self._all_engines
 
     async def search(self, expression, search_progress=None):
+        if cfg.USE_EXCLUDE_SEARCH:
+            if expression:
+                a = [
+                    e.strip(' ') for e in
+                    expression.split(cfg.EXCLUDE_SEARCH_DELIMITER)
+                ]
+                expression = a[0]
+                self._last_exclude = a[1:]
+        else:
+            self._last_exclude = None
+
         coros = []
         for dl in self._engines.values():
             coros.append(dl.search(expression))
@@ -269,10 +282,24 @@ class DlFacade(object):
 
         results = await self._wait_with_progress(coros, search_progress)
         result = []
-        for r in results:
-            r = r.result()
-            if r:
-                result.extend(r)
+
+        for res in results:
+            res = res.result()
+            if res:
+                if self._last_exclude:
+                    result_excluded = []
+                    for r in res:
+                        excluded = False
+                        for e in self._last_exclude:
+                            if e in r.name:
+                                excluded = True
+                                break
+                        if not excluded:
+                            result_excluded.append(r)
+
+                    result.extend(result_excluded)
+                else:
+                    result.extend(res)
 
         return result
 
