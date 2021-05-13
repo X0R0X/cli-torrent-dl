@@ -179,20 +179,17 @@ class BaseDl(object):
         return self._process_magnet_link(response) if response else None
 
     async def _get_url(self, url):
-        if url:
-            try:
-                async with ClientSession(
-                        headers=self._headers,
-                        timeout=ClientTimeout(cfg.REQUEST_TIMEOUT)
-                ) as sess:
-                    # BT4G is a tad slow.
-                    # Should determine a sensible timeout value.
-                    async with sess.get(
-                            url, timeout=cfg.REQUEST_TIMEOUT
-                    ) as response:
-                        return await response.read()
-            except asyncio.exceptions.TimeoutError:
-                return None
+        try:
+            async with ClientSession(
+                    headers=self._headers,
+                    timeout=ClientTimeout(cfg.REQUEST_TIMEOUT)
+            ) as sess:
+                async with sess.get(
+                        url, timeout=cfg.REQUEST_TIMEOUT
+                ) as response:
+                    return await response.read()
+        except Exception:
+            return None
 
     def _mk_search_url(self, expression):
         raise NotImplementedError()
