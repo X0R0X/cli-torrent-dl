@@ -187,7 +187,9 @@ class BaseDl(object):
                 ) as sess:
                     # BT4G is a tad slow.
                     # Should determine a sensible timeout value.
-                    async with sess.get(url, timeout=3600) as response:
+                    async with sess.get(
+                            url, timeout=cfg.REQUEST_TIMEOUT
+                    ) as response:
                         return await response.read()
             except asyncio.exceptions.TimeoutError:
                 return None
