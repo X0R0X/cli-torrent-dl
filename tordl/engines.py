@@ -488,3 +488,56 @@ class TorrentGalaxy(BaseDl):
 
     def _process_magnet_link(self, response):
         pass
+
+
+class BT4G(BaseDl):
+    NAME = 'BT4G'
+    BASE_URL = 'https://bt4g.org'
+    # They appear to JS protect, yet still allow searching this way.
+    # Hopefully they keep it like that.
+    SEARCH_URL = '%s/search/%s/byseeders/%s' % (BASE_URL, '%s', '%s')
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (expression, str(self._current_index))
+
+    def _process_search(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        result = []
+        try:
+            # They're not making it easy.
+            rows = bs.findAll('div', class_='col s12')[1].findAll('div')[1:]
+            for r in rows:
+                a = r.find('h5').find('a')
+                name = a.attrs['title']
+                link = a.attrs['href']
+                # Probably the easiest way to do this.
+                magnet_url = 'magnet:?xt=urn:btih:%s&dn=%s' % (
+                    link.lstrip('/magnet/'), name.replace(' ', '+')
+                )
+                for s in r.findAll('span', class_='lightColor'):
+                    s.decompose()
+                spans = r.findAll('span')[3:]
+                size = spans[0].find('b').text
+                seeders = int(spans[1].find('b').text)
+                leechers = int(spans[2].find('b').text)
+                result.append(
+                    SearchResult(
+                        type(self),
+                        name,
+                        link,
+                        seeders,
+                        leechers,
+                        size,
+                        magnet_url
+                    )
+                )
+        except Exception:
+            pass
+
+        return result
+
+    def _mk_magnet_url(self, link):
+        pass
+
+    def _process_magnet_link(self, response):
+        pass
