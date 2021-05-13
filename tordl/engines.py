@@ -33,7 +33,7 @@ class SolidTorrents(BaseDl):
                         self._current_search,
                         swarm['seeders'],
                         swarm['leechers'],
-                        self._hr_size(o['size'], 0),
+                        self._hr_size(o['size']),
                         o['magnet']
                     )
                 )
@@ -47,13 +47,17 @@ class SolidTorrents(BaseDl):
     def _process_magnet_link(self, response):
         pass
 
-    def _hr_size(self, size, p_index):
+    @staticmethod
+    def _hr_size(size):
         prefixes = ['', 'K', 'M', 'G', 'T', 'P']
-        if size < 1024:
-            fmt = '%s%sB' % ('%.2f' if p_index else '%d', prefixes[p_index])
-            return fmt % size
+        p_index = 0
 
-        return self._hr_size(size / 1024, p_index + 1)
+        while size >= 1024:
+            size /= 1024
+            p_index += 1
+
+        fmt = '%s%sB' % ('%.2f' if p_index else '%d', prefixes[p_index])
+        return fmt % size
 
 
 class KickAssTorrents(BaseDl):
