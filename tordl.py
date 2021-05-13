@@ -75,6 +75,13 @@ def parse_args():
         help='Test all active search engines for errors.'
     )
     ap.add_argument(
+        '--test-all',
+        action='store_true',
+        default=False,
+        help='When running Search Engine Test, test all engines, not just '
+             'currently selected ones.'
+    )
+    ap.add_argument(
         '-n',
         '--page-num-download',
         dest='cfg_page_num_download',
@@ -161,7 +168,7 @@ if __name__ == "__main__":
     if parsed_args.download:
         core.direct_download(search_term)
     elif parsed_args.test_search_engines:
-        core.test_search_engines()
+        core.test_search_engines(parsed_args.test_all)
     elif parsed_args.api:
         core.run_api(search_term, parsed_args.pretty_json)
     else:

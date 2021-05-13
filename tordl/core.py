@@ -4,7 +4,7 @@ import inspect
 import json
 import subprocess
 import time
-from asyncio import Task, Event, FIRST_COMPLETED
+from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
 
 from aiohttp import ClientSession, ClientTimeout
@@ -59,67 +59,12 @@ def direct_download(st, loop=None):
         print('No results found.')
 
 
-def test_search_engines(loop=None):
+def test_search_engines(test_all=True, loop=None):
     if not loop:
         loop = asyncio.get_event_loop()
 
-    # Because we also introduced some 'adult' trackers, this is the most sane
-    # thing to search for. In the end, it's the internet, right ?
-    st = 'xxx'
-    dl = DlFacade(loop)
-    es = dl.engines.values()
-    test_results = []
-    for e in es:
-        cls = e.__class__
-        print(
-            'Testing %s [%s]...' % (
-                '%s.%s' % (cls.__module__, cls.__qualname__), e.NAME
-            )
-        )
-        error = False
-        t = time.time()
-        results = loop.run_until_complete(e.search(st))
-        t = time.time() - t
-        if results and len(results) > 0:
-            print('  - Search results (%d) fetched.' % len(results))
-            r = results[0]
-            if not r.name:
-                error = True
-                print('  - ERROR: Name not found !')
-            if not r.links and not r.magnet_url:
-                error = True
-                print('  - ERROR: Link not found !')
-            if r.seeders is None:
-                error = True
-                print('  - ERROR: Seeders not found !')
-            if r.leechers is None:
-                error = True
-                print('  - ERROR: Leechers not found !')
-            if not r.size:
-                error = True
-                print('  - ERROR: Size not found !')
-            if not r.links[0]:
-                error = True
-                print('  - ERROR: Link not found !')
-            if not r.magnet_url:
-                magnet_url = loop.run_until_complete(e.get_magnet_url(r))
-                if magnet_url:
-                    print('  - Magnet URL fetched.')
-                else:
-                    error = True
-                    print('  - ERROR: MagnetURL not found !')
-        else:
-            error = True
-            print('  - ERROR, no results found !')
-        if not error:
-            test_results.append('[OK] %s [search_time=%.3fs]' % (e.NAME, t))
-        else:
-            test_results.append('[ERR] %s [search_time=%.3fs]' % (e.NAME, t))
-
-    print('-' * 20)
-    for m in test_results:
-        print(m)
-    print('-' * 20)
+    test = SearchEngineTest(test_all, loop)
+    loop.run_until_complete(test.run())
 
 
 def run_api(st, pretty_json=True, loop=None):
@@ -523,3 +468,112 @@ class Api(object):
             )
 
         return json.dumps(j, indent=4 if pretty else None)
+
+
+class SearchEngineTest(object):
+    class Test(object):
+        TEST_RESULTS = []
+        LOCK = Lock()
+
+        def __init__(self, engine):
+            self.engine = engine
+
+            cls = engine.__class__
+            self.messages = [
+                '%s [%s]:' % (
+                    '%s.%s' % (cls.__module__, cls.__qualname__), engine.NAME
+                )
+            ]
+            self.error = False
+
+    def __init__(self, test_all=True, loop=None):
+        self._test_all = test_all
+        self._loop = loop or asyncio.get_event_loop()
+
+    async def _on_results_fetched(self, future, test):
+        time_start = time.time()
+
+        try:
+            results = await future
+        except BaseException as e:
+            results = None
+            test.error = True
+            test.messages.append('  - ERROR: %s' % e)
+
+        if results and len(results) > 0:
+            test.messages.append(
+                '  - Search results (%d) fetched.' % len(results)
+            )
+            r = results[0]
+            if not r.name:
+                test.error = True
+                test.messages.append('  - ERROR: Name not found !')
+            if not r.links and not r.magnet_url:
+                test.error = True
+                test.messages.append('  - ERROR: Link not found !')
+            if r.seeders is None:
+                test.error = True
+                test.messages.append('  - ERROR: Seeders not found !')
+            if r.leechers is None:
+                test.error = True
+                test.messages.append('  - ERROR: Leechers not found !')
+            if not r.size:
+                test.error = True
+                test.messages.append('  - ERROR: Size not found !')
+            if not r.links[0]:
+                test.error = True
+                test.messages.append('  - ERROR: Link not found !')
+            if not r.magnet_url:
+                magnet_url = await test.engine.get_magnet_url(r)
+                if magnet_url:
+                    test.messages.append('  - Magnet URL fetched.')
+                else:
+                    test.error = True
+                    test.messages.append('  - ERROR: MagnetURL not found !')
+        else:
+            test.error = True
+            test.messages.append('  - ERROR, no results found !')
+
+        t = time.time() - time_start
+        if not test.error:
+            test.TEST_RESULTS.append(
+                '[OK] %s [search_time=%.3fs]' % (test.engine.NAME, t)
+            )
+        else:
+            test.TEST_RESULTS.append(
+                '[ERR] %s [search_time=%.3fs]' % (test.engine.NAME, t))
+
+        await test.LOCK.acquire()
+        for m in test.messages:
+            print(m)
+        test.LOCK.release()
+
+    async def run(self):
+        # Because we also introduced some 'adult' trackers, this is the most
+        # sane thing to search for. In the end, it's the internet, right ?
+        st = 'xxx'
+        dl = DlFacade(self._loop)
+        if self._test_all:
+            engines = (e() for e in dl.all_engines)
+        else:
+            engines = dl.engines.values()
+        futures = []
+        for e in engines:
+            cls = e.__class__
+            print(
+                'Running test: %s [%s]...' % (
+                    '%s.%s' % (cls.__module__, cls.__qualname__), e.NAME
+                )
+            )
+            t = self.Test(e)
+            f = asyncio.ensure_future(e.search(st), loop=self._loop)
+            f = self._on_results_fetched(f, t)
+            futures.append(f)
+
+        await asyncio.wait(futures)
+
+        ln = max((len(t) for t in self.Test.TEST_RESULTS))
+        print('-' * ln)
+        for m in self.Test.TEST_RESULTS:
+            print(m)
+        print('-' * ln)
