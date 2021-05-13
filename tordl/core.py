@@ -472,9 +472,6 @@ class Api(object):
 
 class SearchEngineTest(object):
     class Test(object):
-        TEST_RESULTS = []
-        LOCK = Lock()
-
         def __init__(self, engine):
             self.engine = engine
 
@@ -489,6 +486,9 @@ class SearchEngineTest(object):
     def __init__(self, test_all=True, loop=None):
         self._test_all = test_all
         self._loop = loop or asyncio.get_event_loop()
+
+        self._test_results = []
+        self._lock = Lock()
 
     async def _on_results_fetched(self, future, test):
         time_start = time.time()
@@ -536,17 +536,17 @@ class SearchEngineTest(object):
 
         t = time.time() - time_start
         if not test.error:
-            test.TEST_RESULTS.append(
+            self._test_results.append(
                 '[OK] %s [search_time=%.3fs]' % (test.engine.NAME, t)
             )
         else:
-            test.TEST_RESULTS.append(
+            self._test_results.append(
                 '[ERR] %s [search_time=%.3fs]' % (test.engine.NAME, t))
 
-        await test.LOCK.acquire()
+        await self._lock.acquire()
         for m in test.messages:
             print(m)
-        test.LOCK.release()
+        self._lock.release()
 
     async def run(self):
         # Because we also introduced some 'adult' trackers, this is the most
@@ -572,8 +572,8 @@ class SearchEngineTest(object):
 
         await asyncio.wait(futures)
 
-        ln = max((len(t) for t in self.Test.TEST_RESULTS))
+        ln = max((len(t) for t in self._test_results))
         print('-' * ln)
-        for m in self.Test.TEST_RESULTS:
+        for m in self._test_results:
             print(m)
         print('-' * ln)
