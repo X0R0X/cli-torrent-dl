@@ -1,8 +1,8 @@
 import json
 
-from bs4 import BeautifulSoup
-
 from urllib.parse import urlencode
+
+from bs4 import BeautifulSoup
 
 from tordl.core import BaseDl, SearchResult
 
@@ -33,7 +33,7 @@ class SolidTorrents(BaseDl):
                         self._current_search,
                         swarm['seeders'],
                         swarm['leechers'],
-                        self._hr_size(o['size']),
+                        self._hr_size(o['size'], 0),
                         o['magnet']
                     )
                 )
@@ -47,24 +47,13 @@ class SolidTorrents(BaseDl):
     def _process_magnet_link(self, response):
         pass
 
-    def _hr_size(self, size):
+    def _hr_size(self, size, p_index):
+        prefixes = ['', 'K', 'M', 'G', 'T', 'P']
         if size < 1024:
-            return '%dB' % size
-        else:
-            size = size / 1024
-            if size < 1024:
-                return '%.2fKB' % size
-            else:
-                size = size / 1024
-                if size < 1024:
-                    return '%.2fMB' % size
-                else:
-                    size = size / 1024
-                    if size < 1024:
-                        return '%.2fGB' % size
-                    else:
-                        size = size / 1024
-                        return '%.2fTB' % size
+            fmt = '%s%sB' % ('%.2f' if p_index else '%d', prefixes[p_index])
+            return fmt % size
+
+        return self._hr_size(size / 1024, p_index + 1)
 
 
 class KickAssTorrents(BaseDl):
@@ -216,7 +205,8 @@ class ZooqleCom(BaseDl):
 
         return result
 
-    def _get_from_cls(self, tr, cls):
+    @staticmethod
+    def _get_from_cls(tr, cls):
         for c in cls:
             try:
                 peer_num = int(tr.find(class_=c).text)
@@ -331,8 +321,8 @@ class Dl1337xto(BaseDl):
     def _mk_search_url(self, expression):
         return self.SEARCH_URL % (expression, str(self._current_index))
 
-    def _mk_magnet_url(self, magnet_page_link):
-        return '%s%s' % (self.BASE_URL, magnet_page_link)
+    def _mk_magnet_url(self, link):
+        return '%s%s' % (self.BASE_URL, link)
 
     def _process_search(self, response):
         bs = BeautifulSoup(response, features='html.parser')
@@ -535,7 +525,8 @@ class BT4G(BaseDl):
 
         return result
 
-    def _assemble_magnet(self, ih, dn):
+    @staticmethod
+    def _assemble_magnet(ih, dn):
         # Probably the easiest way to do this.
         params = {'xt': 'urn:btih:%s' % ih, 'dn': dn}
         ps = urlencode(params)
