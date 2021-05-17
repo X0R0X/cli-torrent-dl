@@ -21,13 +21,12 @@ if [[ -d $VENV_DIR ]]; then
 # Not sure how this would happen.
 # Maybe corruption or an accidental overwrite?
 # Might as well plan for the worst.
-else if [[ -e $VENV_DIR ]]; then
-	     printf '%s\n' 'Broken virtualenv detected. Reinstalling...'
-	     # Backup old venv in case it's still of some value.
-	     # Won't overwrite files.
-	     mv --backup=numbered "$VENV_DIR"{,.bak}
-	     printf '%s %s\n\n' 'Created backup of virtualenv at' "$VENV_DIR.bak"
-     fi
+elif [[ -e $VENV_DIR ]]; then
+	printf '%s\n' 'Broken virtualenv detected. Reinstalling...'
+	# Backup old venv in case it's still of some value.
+	# Won't overwrite existing files.
+	mv --backup=numbered "$VENV_DIR"{,.bak}
+	printf '%s %s\n\n' 'Created backup of virtualenv at' "$VENV_DIR.bak"
 fi
 
 # Get path of this script, resolving all symlinks.
