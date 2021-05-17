@@ -504,7 +504,7 @@ class BT4G(BaseDl):
                 a = r.find('h5').find('a')
                 name = a.attrs['title']
                 link = a.attrs['href']
-                magnet_url = self._assemble_magnet(link.lstrip('/magnet/'), name)
+                magnet_url = self._encode_magnet(link.lstrip('/magnet/'), name)
 
                 for s in r.findAll('span', class_='lightColor'):
                     s.decompose()
@@ -530,7 +530,7 @@ class BT4G(BaseDl):
         return result
 
     @staticmethod
-    def _assemble_magnet(ih, dn):
+    def _encode_magnet(ih, dn):
         # Probably the easiest way to do this.
         params = {'xt': 'urn:btih:%s' % ih, 'dn': dn}
         ps = urlencode(params)
