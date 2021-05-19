@@ -1,8 +1,8 @@
 import json
 
-from bs4 import BeautifulSoup
-
 from urllib.parse import urlencode
+
+from bs4 import BeautifulSoup
 
 from tordl.core import BaseDl, SearchResult
 
@@ -29,8 +29,7 @@ class SolidTorrents(BaseDl):
                     SearchResult(
                         self,
                         o['title'],
-                        '/search?q=%s' %
-                        self._current_search,
+                        '/search?q=%s' % self._current_search,
                         swarm['seeders'],
                         swarm['leechers'],
                         self._hr_size(o['size']),
@@ -48,23 +47,15 @@ class SolidTorrents(BaseDl):
         pass
 
     def _hr_size(self, size):
-        if size < 1024:
-            return '%dB' % size
-        else:
-            size = size / 1024
-            if size < 1024:
-                return '%.2fKB' % size
-            else:
-                size = size / 1024
-                if size < 1024:
-                    return '%.2fMB' % size
-                else:
-                    size = size / 1024
-                    if size < 1024:
-                        return '%.2fGB' % size
-                    else:
-                        size = size / 1024
-                        return '%.2fTB' % size
+        prefixes = ['', 'K', 'M', 'G', 'T', 'P']
+        p_index = 0
+
+        while size >= 1024:
+            size /= 1024
+            p_index += 1
+
+        fmt = '%s%sB' % ('%.2f' if p_index else '%d', prefixes[p_index])
+        return fmt % size
 
 
 class KickAssTorrents(BaseDl):
