@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+PS1B=$PS1
+
 set -euo pipefail
 
 VENV_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/torrentdl/.venv"
@@ -13,6 +15,7 @@ while [[ -h $SOURCE ]]; do
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
 
+PS1=$PS1B
 . "$VENV_DIR/bin/activate"
 python3 "$SCRIPT_DIR/tordl.py" "$@"
 deactivate

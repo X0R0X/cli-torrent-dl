@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+PS1B=$PS1
+
 set -euo pipefail
 
 VENV_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/torrentdl/.venv"
@@ -40,5 +42,7 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
 
 mkdir -p "$VENV_DIR"
 virtualenv "$VENV_DIR"
+PS1=$PS1B
+
 . "$VENV_DIR/bin/activate"
 pip3 install -r "$SCRIPT_DIR/requirements.txt"
