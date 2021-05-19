@@ -40,9 +40,46 @@ while [[ -h $SOURCE ]]; do
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
 
-mkdir -p "$VENV_DIR"
-virtualenv "$VENV_DIR"
+PYTHON_VERSION=$(python3 -V | awk '{print $2}' | sed 's/\.//g')
+PYTHON_VERSION=${PYTHON_VERSION:0:2}
+
+if [ $PYTHON_VERSION == "38" ] || [ $PYTHON_VERSION == "39" ]; then
+  PYTHON_BIN="python3"
+else
+  if [ "$(which python3.8)" != "" ]; then
+    PYTHON_BIN="python3.8"
+  else
+    if [ "$(which python3.9)" != "" ]; then
+      PYTHON_BIN="python3.9"
+    else
+      echo "Tordl needs python3.8 or python3.9 installed. Please install it (on debian based systems: \$ sudo apt-get install python3.8)"
+      exit 1
+    fi
+  fi
+fi
+
+virtualenv -p $PYTHON_BIN "$VENV_DIR"
 PS1=$PS1B
 
 . "$VENV_DIR/bin/activate"
 pip3 install -r "$SCRIPT_DIR/requirements.txt"
+
+while true; do
+  read -p 'Do You want to link tordl.sh to /usr/local/bin/tordl ? [y/N]: ' choice
+	# Convert $choice to lowercase to keep things clean.
+	case "${choice,,}" in
+		'y')
+		  if [[ -d $VENV_DIR ]]; then
+		    echo "Deleting current /usr/local/bin/tordl ..."
+		    sudo rm /usr/local/bin/tordl
+		  fi
+
+			sudo ln -s "$SCRIPT_DIR/tordl.sh" /usr/local/bin/tordl
+			# Now we can proceed.
+			break
+		;;
+		''|'n')
+			exit 0
+		;;
+	esac
+done
