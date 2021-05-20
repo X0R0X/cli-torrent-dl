@@ -34,22 +34,30 @@ class TopBar(object):
         self._window_top.clear()
 
     def draw(
-            self, w, no_len, source_max, seeders_max, leechers_max, size_max
+            self,
+            w,
+            no_len=None,
+            source_max=None,
+            seeders_max=None,
+            leechers_max=None,
+            size_max=None
     ):
         self._window_top.addstr(0, 0, ' ' * (w - 2))
-        self._window_top.addstr(0, 0, self.NO_CAPTION)
-        x = no_len + 2
-        self._window_top.addstr(0, x, self.TITLE_CAPTION)
-        x = (w - (seeders_max + leechers_max + size_max + source_max)) - len(
-            self.NO_CAPTION
-        ) - 1
-        self._window_top.addstr(0, x, self.SOURCE_CAPTION)
-        x += source_max + 1
-        self._window_top.addstr(0, x, self.SEED_CAPTION)
-        x += seeders_max + 1
-        self._window_top.addstr(0, x, self.LEECH_CAPTION)
-        x += leechers_max + 1
-        self._window_top.addstr(0, x, self.SIZE_CAPTION)
+        if no_len is not None:
+            self._window_top.addstr(0, 0, ' ' * (w - 2))
+            self._window_top.addstr(0, 0, self.NO_CAPTION)
+            x = no_len + 2
+            self._window_top.addstr(0, x, self.TITLE_CAPTION)
+            x = (w - (seeders_max + leechers_max + size_max + source_max)) - len(
+                self.NO_CAPTION
+            ) - 1
+            self._window_top.addstr(0, x, self.SOURCE_CAPTION)
+            x += source_max + 1
+            self._window_top.addstr(0, x, self.SEED_CAPTION)
+            x += seeders_max + 1
+            self._window_top.addstr(0, x, self.LEECH_CAPTION)
+            x += leechers_max + 1
+            self._window_top.addstr(0, x, self.SIZE_CAPTION)
 
     def finish(self):
         self._window_top.clear()
@@ -720,6 +728,7 @@ class App(object):
         while not self._should_exit:
             try:
                 self._lock.acquire()
+
                 self._draw()
 
                 if self._start_search_str:
@@ -823,7 +832,7 @@ class App(object):
                     w, no_len, source_max, seeders_max, leechers_max, size_max
                 )
             else:
-                self._top_bar.resize()
+                self._top_bar.draw(w)
 
             self._bottom_bar.draw()
 
