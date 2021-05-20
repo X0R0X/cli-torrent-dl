@@ -19,14 +19,25 @@ SEARCH_ENGINES = [
 ]
 TORRENT_CLIENT_CMD = 'qbittorrent %s'
 BROWSER_CMD = 'firefox %s'
+
 HISTORY_MAX_LENGTH = 100
+
 PAGE_NUM_DOWNLOAD = 1
 REQUEST_TIMEOUT = 5
+
 AGGREGATE_SAME_MAGNET_LINKS = True
 FETCH_MISSING_MAGNET_LINKS = False
 FETCH_MAGNET_LINKS_CONCURRENCE = 20
+
 USE_EXCLUDE_SEARCH = True
 EXCLUDE_SEARCH_DELIMITER = '::-'
+
+PRETTY_JSON = False
+
+RPC_BIND_ADDRESS = '127.0.0.1'
+RPC_BIND_PORT = 57000
+RPC_USER = ''
+RPC_PASS = ''
 
 
 def mk_cfg():
@@ -80,7 +91,10 @@ def init_cfg():
 
 def override_cfg(args):
     mod = sys.modules[__name__]
+
     mod.SEARCH_ENGINES = args.cfg_search_engines.replace(' ', '').split(',')
+    mod.RPC_SERVER_BIND_ADDRESS, mod.RPC_SERVER_BIND_PORT = \
+        args.rpc_bind.split(':')
 
     omit = ('cfg_search_engines', 'tordl')
     prefix = 'cfg_'

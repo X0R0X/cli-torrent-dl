@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-import curses
 import os
 import shutil
 import sys
-from functools import partial
 
-from tordl import config as cfg, core
-from tordl.app import App
+from tordl import config as cfg, func
 
 
 def parse_args():
@@ -100,6 +97,7 @@ def parse_args():
     ap.add_argument(
         '-p',
         '--pretty-json',
+        dest='cfg_pretty_json',
         default=False,
         action='store_true',
         help='Print JSON in pretty format if using --api mode.'
@@ -159,13 +157,31 @@ def parse_args():
         help='After this character sequence the next string is considered to be'
              ' excluded from search result.'
     )
+    ap.add_argument(
+        '-s',
+        '--rpc-server',
+        default=False,
+        action='store_true',
+        help='Run JSON RPC Server. Consider using '
+             '--fetch-magnet-link-concurrence as well.'
+    )
+    ap.add_argument(
+        '-q',
+        '--rpc-client',
+        default=False,
+        action='store_true',
+        help='Run as a JSON RPC Client.'
+    )
+    ap.add_argument(
+        '-i',
+        '--rpc-bind',
+        default='%s:%s' % (cfg.RPC_BIND_ADDRESS, cfg.RPC_BIND_PORT),
+        type=str,
+        help='RPC Server bind address and port. (ADDRESS:PORT format).'
+    )
+
     parsed = ap.parse_args(sys.argv[1:])
     return parsed
-
-
-def run_curses_ui(st):
-    os.environ.setdefault('ESCDELAY', '0')
-    curses.wrapper(partial(App, search=st))
 
 
 if __name__ == "__main__":
@@ -183,12 +199,16 @@ if __name__ == "__main__":
     search_term = ' '.join(parsed_args.search)
 
     if parsed_args.download:
-        core.direct_download(search_term)
+        func.direct_download(search_term)
     elif parsed_args.test_search_engines:
-        core.test_search_engines(parsed_args.test_all)
+        func.test_search_engines(parsed_args.test_all)
     elif parsed_args.api:
-        core.run_api(search_term, parsed_args.pretty_json)
+        func.run_api(search_term, parsed_args.pretty_json)
+    elif parsed_args.rpc_server:
+        func.run_rpc_server()
+    elif parsed_args.rpc_client:
+        func.run_rpc_client(search_term)
     else:
-        run_curses_ui(search_term)
+        func.run_curses_ui(search_term)
 
     exit(0)

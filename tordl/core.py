@@ -2,7 +2,6 @@ import asyncio
 import importlib
 import inspect
 import json
-import subprocess
 import time
 from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
@@ -10,83 +9,6 @@ from importlib import machinery, util
 from aiohttp import ClientSession, ClientTimeout
 
 import tordl.config as cfg
-
-
-def run_torrent_client(magnet_url):
-    cmd = (cfg.TORRENT_CLIENT_CMD % magnet_url).split(' ')
-    subprocess.Popen(
-        cmd,
-        stderr=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL
-    )
-
-
-def open_torrent_link(link):
-    cmd = (cfg.BROWSER_CMD % link).split(' ')
-    subprocess.Popen(
-        cmd,
-        stderr=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL
-    )
-
-
-def direct_download(st, loop=None):
-    if not st:
-        print('No search term defined, cannot use --download option.')
-        exit(1)
-
-    if not loop:
-        loop = asyncio.get_event_loop()
-
-    dl = DlFacade(loop)
-    print('Searching %s for "%s"...' % (','.join(cfg.SEARCH_ENGINES), st))
-    results = loop.run_until_complete(dl.search(st))
-    if results:
-        results = sorted(results, key=lambda r: r.seeders, reverse=True)
-        result = results[0]
-        print('Found "%s", seeds: %s, size: %s,  ' % (
-            result.name, result.seeders, result.size
-        ))
-        if result.magnet_url:
-            magnet_url = result.magnet_url
-        else:
-            print('Fetching magnet link...')
-            magnet_url = loop.run_until_complete(dl.get_magnet_url(result))
-
-        print('Running torrent client...')
-        run_torrent_client(magnet_url)
-    else:
-        print('No results found.')
-
-
-def test_search_engines(test_all=True, loop=None):
-    if not loop:
-        loop = asyncio.get_event_loop()
-
-    test = SearchEngineTest(test_all, loop)
-    loop.run_until_complete(test.run())
-
-
-def run_api(st, pretty_json=True, loop=None):
-    if not st:
-        print('No search term defined, cannot use --api option.')
-        exit(1)
-
-    if not loop:
-        loop = asyncio.get_event_loop()
-
-    api = Api()
-
-    sr = loop.run_until_complete(
-        api.fetch_with_magnet_links(
-            st,
-            cfg.FETCH_MISSING_MAGNET_LINKS,
-            cfg.AGGREGATE_SAME_MAGNET_LINKS,
-            cfg.FETCH_MAGNET_LINKS_CONCURRENCE
-        )
-    )
-
-    print(api.mk_json_output(sr, pretty_json))
 
 
 class SearchResult(object):
@@ -448,54 +370,6 @@ class DlFacade(object):
         return done
 
 
-class Api(object):
-    def __init__(self, dl_classes=None):
-        self._dl = DlFacade(dl_classes)
-
-    async def fetch_with_magnet_links(
-            self,
-            search_term,
-            fetch_missing_magnet_links=True,
-            aggregate_same_magnet_links=True,
-            concurrent=20,
-            search_progress=None
-    ):
-        search_results = await self._dl.fetch_pages(
-            search_term, search_progress
-        )
-
-        if fetch_missing_magnet_links:
-            await self._dl.fetch_magnet_links(
-                search_results, concurrent
-            )
-
-        if aggregate_same_magnet_links:
-            search_results = self._dl.aggregate_same_magnets(search_results)
-
-        return search_results
-
-    def mk_json_output(self, search_results, pretty=False):
-        result = []
-        j = {'result': result}
-        for sr in search_results:
-            result.append(
-                {
-                    'name': sr.name,
-                    'links': [
-                        '%s%s' % (sr.origins[i].BASE_URL, sr.links[i])
-                        for i in range(len(sr.origins))
-                    ],
-                    'magnet_url': sr.magnet_url,
-                    'origins': [origin.NAME for origin in sr.origins],
-                    'seeds': sr.seeders,
-                    'leeches': sr.leechers,
-                    'size': sr.size
-                }
-            )
-
-        return json.dumps(j, indent=4 if pretty else None)
-
-
 class SearchEngineTest(object):
     class Test(object):
         def __init__(self, engine):
@@ -603,3 +477,61 @@ class SearchEngineTest(object):
         for m in self._test_results:
             print(m)
         print('-' * ln)
+
+
+class Api(object):
+    def __init__(
+            self,
+            dl_classes=None,
+            fetch_missing_magnet_links=True,
+            aggregate_same_magnet_links=True,
+            concurrent=20,
+            search_progress=None,
+            pretty_output=False
+    ):
+        self._fetch_missing_magnet_links = fetch_missing_magnet_links
+        self._aggregate_same_magnet_links = aggregate_same_magnet_links
+        self._concurrent = concurrent
+        self._search_progress = search_progress
+        self._pretty_output = pretty_output
+
+        self._dl = DlFacade(dl_classes)
+
+    async def fetch_with_magnet_links(
+            self,
+            search_term
+    ):
+        search_results = await self._dl.fetch_pages(
+            search_term, self._search_progress
+        )
+
+        if self._fetch_missing_magnet_links:
+            await self._dl.fetch_magnet_links(
+                search_results, self._concurrent
+            )
+
+        if self._aggregate_same_magnet_links:
+            search_results = self._dl.aggregate_same_magnets(search_results)
+
+        return self._mk_json_output(search_results, self._pretty_output)
+
+    def _mk_json_output(self, search_results, pretty=False):
+        result = []
+        j = {'result': result}
+        for sr in search_results:
+            result.append(
+                {
+                    'name': sr.name,
+                    'links': [
+                        '%s%s' % (sr.origins[i].BASE_URL, sr.links[i])
+                        for i in range(len(sr.origins))
+                    ],
+                    'magnet_url': sr.magnet_url,
+                    'origins': [origin.NAME for origin in sr.origins],
+                    'seeds': sr.seeders,
+                    'leeches': sr.leechers,
+                    'size': sr.size
+                }
+            )
+
+        return json.dumps(j, indent=4 if pretty else None)

@@ -3,7 +3,6 @@ import curses
 import logging
 import os
 import string
-from asyncio import Task
 from collections import deque
 from concurrent.futures._base import CancelledError
 from curses import ascii
@@ -11,8 +10,7 @@ from functools import partial
 from threading import Thread, Lock
 from time import sleep
 
-from tordl import config as cfg
-from tordl import core
+from tordl import config as cfg, func
 from tordl.core import SearchResult, DlFacade, SearchProgress
 
 
@@ -676,15 +674,6 @@ class ItemWindow(object):
 
 
 class App(object):
-    class FetchTask(Task):
-        def __init__(self, loop, coro, search_term):
-            super().__init__(coro, loop=loop)
-            self.search_term = search_term
-
-    class FetchMagUrlTask(Task):
-        def __init__(self, loop, coro):
-            super().__init__(coro, loop=loop)
-
     def __init__(self, screen, search=''):
         self._screen = screen
         self._start_search_str = search
@@ -944,7 +933,7 @@ class App(object):
         self._lock.acquire()
 
         if item.magnet_url:
-            core.run_torrent_client(item.magnet_url)
+            func.run_torrent_client(item.magnet_url)
         else:
             self._bottom_bar.set_fetching_magnet_url()
             future = asyncio.run_coroutine_threadsafe(
@@ -966,7 +955,7 @@ class App(object):
             ml = None
 
         if ml:
-            core.run_torrent_client(ml)
+            func.run_torrent_client(ml)
         else:
             # TODO magnurl error
             pass
@@ -974,6 +963,6 @@ class App(object):
         self._lock.release()
 
     def _open_torrent_link(self, item):
-        core.open_torrent_link(
+        func.open_torrent_link(
             '%s%s' % (item.origins[0].BASE_URL, item.links[0])
         )
