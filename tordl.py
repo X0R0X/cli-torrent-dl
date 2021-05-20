@@ -21,19 +21,15 @@ def parse_args():
                     'by default) through command line.',
         formatter_class=ArgParseFormatter
     )
+    """
+    Search / Generic
+    """
     ap.add_argument(
         'search',
         nargs='*',
         default='',
         help='Search term. All positional arguments are concatenated to one '
              'string, no need for " "'
-    )
-    ap.add_argument(
-        '-r',
-        '--revert-to-default',
-        action='store_true',
-        default=False,
-        help='Purge all custom configuration and revert to default.'
     )
     ap.add_argument(
         '-e',
@@ -44,63 +40,12 @@ def parse_args():
              ' loaded from config in %s' % cfg.CFG_FILE
     )
     ap.add_argument(
-        '-c',
-        '--torrent-client-cmd',
-        dest='cfg_torrent_client_cmd',
-        default=cfg.TORRENT_CLIENT_CMD,
-        help='Command to execute torrent client with magnet link as a parameter'
-    )
-    ap.add_argument(
-        '-b',
-        '--browser-cmd',
-        dest='cfg_browser_cmd',
-        default=cfg.BROWSER_CMD,
-        help='Command to open torrent link in a browser.'
-    )
-    ap.add_argument(
-        '-d',
-        '--download',
-        action='store_true',
-        default=False,
-        help='Directly download first search result, don\'t run UI.'
-    )
-    ap.add_argument(
-        '-t',
-        '--test-search-engines',
-        action='store_true',
-        default=False,
-        help='Test all active search engines for errors.'
-    )
-    ap.add_argument(
-        '--test-all',
-        action='store_true',
-        default=False,
-        help='When running Search Engine Test, test all engines, not just '
-             'currently selected ones.'
-    )
-    ap.add_argument(
         '-n',
         '--page-num-download',
         dest='cfg_page_num_download',
         default=cfg.PAGE_NUM_DOWNLOAD,
         type=int,
         help='Fetch N pages of search results from search engines.'
-    )
-    ap.add_argument(
-        '-a',
-        '--api',
-        default=False,
-        action='store_true',
-        help='Run in API mode: fetch result and print json to the stdout. '
-             'Consider using --fetch-missing-magnet-links as well.'
-    )
-    ap.add_argument(
-        '-p',
-        '--pretty-json',
-        dest='cfg_pretty_json',
-        default=False,
-        action='store_true',
-        help='Print JSON in pretty format if using --api mode.'
     )
     ap.add_argument(
         '-o',
@@ -157,6 +102,71 @@ def parse_args():
         help='After this character sequence the next string is considered to be'
              ' excluded from search result.'
     )
+    """
+    System
+    """
+    ap.add_argument(
+        '-r',
+        '--revert-to-default',
+        action='store_true',
+        default=False,
+        help='Purge all custom configuration and revert to default.'
+    )
+    ap.add_argument(
+        '-c',
+        '--torrent-client-cmd',
+        dest='cfg_torrent_client_cmd',
+        default=cfg.TORRENT_CLIENT_CMD,
+        help='Command to execute torrent client with magnet link as a parameter'
+    )
+    ap.add_argument(
+        '-b',
+        '--browser-cmd',
+        dest='cfg_browser_cmd',
+        default=cfg.BROWSER_CMD,
+        help='Command to open torrent link in a browser.'
+    )
+    """
+    Mode Test Search Engines
+    """
+    ap.add_argument(
+        '-t',
+        '--test-search-engines',
+        action='store_true',
+        default=False,
+        help='Test all active search engines for errors.'
+    )
+    ap.add_argument(
+        '--test-all',
+        action='store_true',
+        default=False,
+        help='When running Search Engine Test, test all engines, not just '
+             'currently selected ones.'
+    )
+    """
+    Mode Direct Download
+    """
+    ap.add_argument(
+        '-d',
+        '--download',
+        action='store_true',
+        default=False,
+        help='Directly download first search result, don\'t run UI.'
+    )
+    """
+    Mode API
+    """
+    ap.add_argument(
+        '-a',
+        '--api',
+        default=False,
+        action='store_true',
+        help='Run in API mode: fetch result and print json to the stdout. '
+             'Consider using --fetch-missing-magnet-links as well.'
+    )
+    """
+    Mode JSON RPC Server
+    """
     ap.add_argument(
         '-s',
         '--rpc-server',
@@ -165,6 +175,9 @@ def parse_args():
         help='Run JSON RPC Server. Consider using '
              '--fetch-magnet-link-concurrence as well.'
     )
+    """
+    Mode JSON RPC Client
+    """
     ap.add_argument(
         '-q',
         '--rpc-client',
@@ -172,12 +185,26 @@ def parse_args():
         action='store_true',
         help='Run as a JSON RPC Client.'
     )
+    """
+    Mode RPC Generic
+    """
     ap.add_argument(
         '-i',
         '--rpc-bind',
         default='%s:%s' % (cfg.RPC_BIND_ADDRESS, cfg.RPC_BIND_PORT),
         type=str,
         help='RPC Server bind address and port. (ADDRESS:PORT format).'
+    )
+    """
+    Run Modes Generic
+    """
+    ap.add_argument(
+        '-p',
+        '--pretty-json',
+        dest='cfg_pretty_json',
+        default=False,
+        action='store_true',
+        help='Print JSON in pretty format if using --api mode.'
     )
 
     parsed = ap.parse_args(sys.argv[1:])
