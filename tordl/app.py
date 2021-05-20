@@ -10,7 +10,7 @@ from functools import partial
 from threading import Thread, Lock
 from time import sleep
 
-from tordl import config as cfg, func
+from tordl import config as cfg, func, core
 from tordl.core import SearchResult, DlFacade, SearchProgress
 
 
@@ -719,6 +719,7 @@ class App(object):
         self._display()
 
     def _mk_event_loop(self):
+        core.mk_loop()
         loop = asyncio.new_event_loop()
         t = Thread(target=loop.run_forever)
         t.start()

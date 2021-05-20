@@ -6,9 +6,20 @@ import time
 from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
 
+import uvloop
 from aiohttp import ClientSession, ClientTimeout
 
 import tordl.config as cfg
+
+
+def mk_loop():
+    try:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    except Exception as e:
+        print(
+            'Unable to use uvloop :(, we won\'t be able to achieve optimal '
+            'performance. "%s' % e
+        )
 
 
 class SearchResult(object):

@@ -5,9 +5,18 @@ import subprocess
 from functools import partial
 
 import tordl.config as cfg
+from tordl import core
 from tordl.app import App
 from tordl.core import DlFacade, SearchEngineTest, Api
 from tordl.rpc import JsonRpcServer, JsonRpcClient
+
+
+def _mk_loop(loop):
+    if not loop:
+        core.mk_loop()
+        loop = asyncio.get_event_loop()
+
+    return loop
 
 
 def run_torrent_client(magnet_url):
@@ -33,8 +42,7 @@ def direct_download(st, loop=None):
         print('No search term defined, cannot use --download option.')
         exit(1)
 
-    if not loop:
-        loop = asyncio.get_event_loop()
+    loop = _mk_loop(loop)
 
     dl = DlFacade(loop)
     print('Searching %s for "%s"...' % (','.join(cfg.SEARCH_ENGINES), st))
@@ -58,9 +66,7 @@ def direct_download(st, loop=None):
 
 
 def test_search_engines(test_all=True, loop=None):
-    if not loop:
-        loop = asyncio.get_event_loop()
-
+    loop = _mk_loop(loop)
     test = SearchEngineTest(test_all, loop)
     loop.run_until_complete(test.run())
 
@@ -70,8 +76,7 @@ def run_api(st, pretty_json=True, loop=None):
         print('No search term defined, cannot use --api option.')
         exit(1)
 
-    if not loop:
-        loop = asyncio.get_event_loop()
+    loop = _mk_loop(loop)
 
     api = Api(
         None,
@@ -88,7 +93,7 @@ def run_api(st, pretty_json=True, loop=None):
 
 
 def run_rpc_server(loop=None):
-    loop = loop or asyncio.get_event_loop()
+    loop = _mk_loop(loop)
     server = JsonRpcServer(
         cfg.RPC_BIND_ADDRESS,
         cfg.RPC_BIND_PORT,
@@ -110,7 +115,7 @@ def run_rpc_client(search_term, loop=None):
         print('No search term provided.')
         exit(1)
 
-    loop = loop or asyncio.get_event_loop()
+    loop = _mk_loop(loop)
     c = JsonRpcClient(
         cfg.RPC_BIND_ADDRESS,
         cfg.RPC_BIND_PORT,
