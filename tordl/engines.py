@@ -377,7 +377,7 @@ class NyaaTracker(BaseDl):
 
     def _mk_search_url(self, expression):
         return self.SEARCH_URL % (
-            expression.replace(' ', '+'), str(self._current_index)
+            expression, str(self._current_index)
         )
 
     def _process_search(self, response):
@@ -439,9 +439,8 @@ class TorrentGalaxy(BaseDl):
     )
 
     def _mk_search_url(self, expression):
-        # if expression:
         return self.SEARCH_URL % (
-            expression.replace(' ', '+'), str(self._current_index)
+            expression, str(self._current_index)
         )
 
     def _process_search(self, response):
