@@ -213,8 +213,10 @@ def parse_args():
 
 if __name__ == "__main__":
     if '-r' in sys.argv or '--revert-to-default' in sys.argv:
-        if os.path.exists(cfg.CFG_DIR):
-            shutil.rmtree(cfg.CFG_DIR)
+        if os.path.exists(cfg.CFG_FILE):
+            os.remove(cfg.CFG_FILE)
+        if os.path.exists(cfg.CFG_ENGINES_FILE):
+            os.remove(cfg.CFG_ENGINES_FILE)
         cfg.init_cfg()
         print('Reverted to default config.')
         exit(0)
@@ -230,7 +232,7 @@ if __name__ == "__main__":
     elif parsed_args.test_search_engines:
         func.test_search_engines(parsed_args.test_all)
     elif parsed_args.api:
-        func.run_api(search_term, parsed_args.pretty_json)
+        func.run_api(search_term, parsed_args.cfg_pretty_json)
     elif parsed_args.rpc_server:
         func.run_rpc_server()
     elif parsed_args.rpc_client:

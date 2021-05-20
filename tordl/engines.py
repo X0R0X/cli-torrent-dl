@@ -439,10 +439,10 @@ class TorrentGalaxy(BaseDl):
     )
 
     def _mk_search_url(self, expression):
-        if expression:
-            return self.SEARCH_URL % (
-                expression.replace(' ', '+'), str(self._current_index)
-            )
+        # if expression:
+        return self.SEARCH_URL % (
+            expression.replace(' ', '+'), str(self._current_index)
+        )
 
     def _process_search(self, response):
         bs = BeautifulSoup(response, features='html.parser')
