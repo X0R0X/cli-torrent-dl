@@ -3,6 +3,8 @@ import curses
 import json
 import os
 import subprocess
+import sys
+import webbrowser
 from functools import partial
 
 import tordl.config as cfg
@@ -30,18 +32,13 @@ def run_torrent_client(magnet_url):
 
 
 def open_torrent_link(link):
-    cmd = (cfg.BROWSER_CMD % link).split(' ')
-    subprocess.Popen(
-        cmd,
-        stderr=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL
-    )
+    webbrowser.open(link)
 
 
 def direct_download(st, loop=None):
     if not st:
         print('No search term defined, cannot use --download option.')
-        exit(1)
+        sys.exit(1)
 
     loop = _mk_loop(loop)
 
@@ -75,9 +72,10 @@ def test_search_engines(test_all=True, loop=None):
 def run_api(st, pretty_json=True, loop=None):
     if not st:
         print('No search term defined, cannot use --api option.')
-        exit(1)
+        sys.exit(1)
 
     loop = _mk_loop(loop)
+    asyncio.set_event_loop(loop)
 
     api = Api(
         None,
@@ -90,7 +88,7 @@ def run_api(st, pretty_json=True, loop=None):
 
     sr = loop.run_until_complete(api.fetch_with_magnet_links(st))
 
-    print(sr)
+    return sr
 
 
 def run_rpc_server(loop=None):
@@ -114,9 +112,10 @@ def run_rpc_server(loop=None):
 def run_rpc_client(search_term, loop=None):
     if not search_term:
         print('No search term provided.')
-        exit(1)
+        sys.exit(1)
 
     loop = _mk_loop(loop)
+    asyncio.set_event_loop(loop)
     c = JsonRpcClient(
         cfg.RPC_BIND_ADDRESS,
         cfg.RPC_BIND_PORT,

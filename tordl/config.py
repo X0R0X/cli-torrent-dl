@@ -18,7 +18,6 @@ SEARCH_ENGINES = [
     'Nyaa', 'Solid', 'TGx', 'TPB', 'Zooqle'
 ]
 TORRENT_CLIENT_CMD = 'qbittorrent %s'
-BROWSER_CMD = 'firefox %s'
 
 HISTORY_MAX_LENGTH = 100
 
