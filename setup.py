@@ -1,12 +1,14 @@
 from pathlib import Path
 from setuptools import find_packages, setup
 
+
 def load_requirements():
     return [
         l.strip()
         for l in Path('requirements.txt').read_text().splitlines()
         if not l.startswith('#')
     ]
+
 
 setup(
     name='tordl',

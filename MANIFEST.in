@@ -3,3 +3,4 @@ include README.md
 include LICENSE.md
 include tordl.py
 include tordl.sh
+include setup.sh
