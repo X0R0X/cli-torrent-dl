@@ -1,5 +1,6 @@
 import asyncio
 import curses
+import json
 import os
 import subprocess
 from functools import partial
@@ -123,7 +124,11 @@ def run_rpc_client(search_term, loop=None):
         cfg.RPC_PASS,
         loop=loop
     )
-    print(loop.run_until_complete(c.search(search_term)))
+    sr = loop.run_until_complete(c.search(search_term))
+    if cfg.PRETTY_JSON:
+        j = json.loads(sr)
+        sr = json.dumps(j, indent=4)
+    print(sr)
 
 
 def run_curses_ui(st):
