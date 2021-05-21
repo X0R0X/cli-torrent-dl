@@ -85,7 +85,8 @@ format to the standard output and exit. Consider using `-m` or
 ### RPC Server
 Run with `-s` or `--rpc-server` to start RPC Server, see config or `-h`for
 settings details. Consider using `-m` or `--fetch-missing-magnet-links` in this
-mode.
+mode. JSON RPC Server follow jsonrpc 2.0 standard. Currently, there is only
+one RPC method `search` which expects array of one argument - the search term.
 
 ### RPC Client
 Run with `-q` or `--rpc-client`, see `-h` for setting connection details.
@@ -94,6 +95,28 @@ Run with `-q` or `--rpc-client`, see `-h` for setting connection details.
 Directly downloads and opens torrent client with magnet link from first search
 result. Run with `-d` or `--download`.
 
+## JSON Output Format
+```
+{
+    "result": [
+        {
+            "name": "Debian 8 7 1 Jessie x64 x86 64 DVD1 ISO Uzerus",
+            "links": [
+                "https://kickasss.to/debian-8-7-1-jessie-x64-x86_64-dvd1-iso-uzerus-t2086014.html"
+            ],
+            "magnet_url": "magnet:?xt=urn:btih:40F90995A1C16A1BF454D09907F57700F3E8BD64...",
+            "origins": [
+                "KAT"
+            ],
+            "seeds": 2,
+            "leeches": 0,
+            "size": "3.7GB"
+        },
+        ...,
+        ...,
+        ...
+}
+```
 ## Creating own search engine extensions
 See `~/.config/torrentdl/engines.py` and 
 `~/.config/torrentdl/config.json#search_engines`.
