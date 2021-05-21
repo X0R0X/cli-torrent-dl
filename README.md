@@ -16,6 +16,7 @@ Table of Contents
 
 * [Installation](#installation)
   * [Prerequisites](#prerequisites)
+  * [Setup](#setup)
 * [Config](#config)
 * [Docker](#docker)
   * [Build](#build)
@@ -39,6 +40,8 @@ Installation
 ### Prerequisites
 
 * Python 3.8+
+
+### Setup
 
     $ ./setup.sh
 
