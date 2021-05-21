@@ -14,6 +14,75 @@ from tordl import config as cfg, func, core
 from tordl.core import SearchResult, DlFacade, SearchProgress
 
 
+class BaseScrollableWindow(object):
+    def __init__(self, screen, items=None, window=None):
+        self._screen = screen
+        self._window = window
+        self._items = items
+        self._position = 0
+        self._draw_start_index = 0
+
+    @property
+    def items(self):
+        return self._items
+
+    def process_key(self, key):
+        h, _ = self._screen.getmaxyx()
+        if key == curses.KEY_UP:
+            if self._items:
+                self._navigate(-1)
+        elif key == curses.KEY_DOWN:
+            if self._items:
+                self._navigate(1)
+        elif key == curses.KEY_PPAGE:
+            if self._items:
+                self._navigate(-(h - 2) // 2)
+        elif key == curses.KEY_NPAGE:
+            if self._items:
+                self._navigate((h - 2) // 2)
+
+    def _resize(self, max_items):
+        if self._position > len(self._items) - max_items:
+            self._draw_start_index = self._position - max_items
+
+    def _get_max_items(self, h):
+        if self._items:
+            if h - 2 < len(self._items):
+                max_items = min((h - 2, len(self._items)))
+                if self._position >= self._draw_start_index + max_items \
+                        or self._position < len(self._items) - max_items and \
+                        self._draw_start_index > self._position:
+                    if self._position - max_items + 1 > 0:
+                        if self._position + 1 == self._draw_start_index:
+                            self._draw_start_index = max((0, self._position))
+                        else:
+                            self._draw_start_index = max(
+                                (0, self._position - max_items + 1)
+                            )
+                    else:
+                        self._draw_start_index = max((0, self._position))
+            else:
+                max_items = len(self._items)
+                self._draw_start_index = 0
+        else:
+            max_items = 0
+
+        return max_items
+
+    def _navigate(self, n):
+        self._position += n
+        if abs(n) == 1:
+            if self._position < 0:
+                self._position = len(self._items) - 1
+            elif self._position >= len(self._items):
+                self._position = 0
+        else:
+            if self._position < 0:
+                self._position = 0
+            elif self._position >= len(self._items):
+                self._position = len(self._items) - 1
+
+
 class TopBar(object):
     NO_CAPTION = 'No.'
     TITLE_CAPTION = 'Title'
@@ -48,7 +117,8 @@ class TopBar(object):
             self._window_top.addstr(0, 0, self.NO_CAPTION)
             x = no_len + 2
             self._window_top.addstr(0, x, self.TITLE_CAPTION)
-            x = (w - (seeders_max + leechers_max + size_max + source_max)) - len(
+            x = (w - (
+                    seeders_max + leechers_max + size_max + source_max)) - len(
                 self.NO_CAPTION
             ) - 1
             self._window_top.addstr(0, x, self.SOURCE_CAPTION)
@@ -257,49 +327,59 @@ class BottomBar(object):
         self._search_history_index = len(self._search_history)
 
 
-class EngineSelectionWindow(object):
+class EngineSelectionWindow(BaseScrollableWindow):
     WINDOW_CAPTION = 'Engine Selection'
     BUTTON_OK_CAPTION = 'OK'
     BUTTON_SAVE_CAPTION = 'SAVE'
+    MIN_WIN_HEIGHT = 7
 
     def __init__(self, screen, downloader):
-        self._screen = screen
+        items = downloader.all_engines.copy()
+        items.append(self.BUTTON_OK_CAPTION)
+        items.append(self.BUTTON_SAVE_CAPTION)
+
+        super().__init__(screen, items)
+
         self._active_engines = downloader.engines
-        self._all_engines = downloader.all_engines
 
         self.active = False
-        self._window = None
-        self._position = 0
 
     def set_active(self, active):
         self.active = active
         if active:
-            self._position = 0
-            self._mk_window()
+            if self._screen.getmaxyx()[0] > 9:
+                self._position = 0
+                self._mk_window()
+            else:
+                self.active = False
         else:
             self._window.erase()
+            self._window.clear()
+            self._window.refresh()
             self._window = None
 
     def draw(self):
         if self.active:
             win_w = self._mk_win_w()
 
+            max_h = min(len(self.items) + 2, self._screen.getmaxyx()[0] - 4)
+
+            max_items = self._get_max_items(max_h)
+
             self._window.erase()
             self._window.box()
             self._window.addstr(
-                0, (win_w - len(self.WINDOW_CAPTION)) // 2, self.WINDOW_CAPTION
+                0, (win_w - len(self.WINDOW_CAPTION)) // 2,
+                self.WINDOW_CAPTION
             )
-            self._window.refresh()
 
-            items = self._all_engines.copy()
-            items.append(self.BUTTON_OK_CAPTION)
-            items.append(self.BUTTON_SAVE_CAPTION)
-            for i, item in enumerate(items):
-                if i == self._position:
+            for index in range(max_items):
+                if index + self._draw_start_index == self._position:
                     mode = curses.A_REVERSE
                 else:
                     mode = curses.A_NORMAL
 
+                item = self._items[self._draw_start_index + index]
                 if type(item) is str:
                     if len(self.WINDOW_CAPTION) % 2 == 0:
                         sp = ' ' * ((win_w - len(item) - 3) // 2)
@@ -307,25 +387,26 @@ class EngineSelectionWindow(object):
                     else:
                         sp = ' ' * ((win_w - len(item) - 4) // 2)
                         cap = '[%s %s%s]' % (sp, item, sp)
-                    self._window.addstr(i + 1, 1, cap, mode)
+                    self._window.addstr(index + 1, 1, cap, mode)
                 else:
                     s = self._mk_item_caption(item)
                     cap = '%s%s' % (s, ' ' * (win_w - 3 - len(s)))
-                    self._window.addstr(i + 1, 1, cap, mode)
+                    self._window.addstr(index + 1, 1, cap, mode)
                     s = '[X]' if item in self._active_engines.keys() else '[ ]'
-                    self._window.addstr(i + 1, win_w - 4, s, mode)
+                    self._window.addstr(index + 1, win_w - 4, s, mode)
+
+            self._window.refresh()
 
     def process_key(self, key):
+        super().process_key(key)
+
         if key in (curses.ascii.ESC, ord('p')):
             self.set_active(False)
-        elif key == curses.KEY_UP:
-            self._navigate(-1)
-        elif key == curses.KEY_DOWN:
-            self._navigate(1)
         elif key in (curses.KEY_ENTER, ord("\n"), 32):
-            if self._position == len(self._all_engines):
+            p = self._position
+            if p == len(self._items) - 2:
                 self.set_active(False)
-            elif self._position == len(self._all_engines) + 1:
+            elif p == len(self._items) - 1:
                 cfg.SEARCH_ENGINES = [e.NAME for e in self._active_engines]
                 cfg.write_cfg()
                 self.set_active(False)
@@ -334,34 +415,33 @@ class EngineSelectionWindow(object):
 
     def resize(self):
         if self._window:
-            self._mk_window()
+            if self._screen.getmaxyx()[0] > self.MIN_WIN_HEIGHT:
+                self._mk_window()
+                self._window.refresh()
+            else:
+                self.set_active(False)
 
     def _select_engine(self):
         if len(self._active_engines) > 1 or \
-                self._all_engines[self._position] != \
+                self._items[self._position] != \
                 tuple(self._active_engines.keys())[0]:
-            e = self._all_engines[self._position]
+            e = self._items[self._position]
             if e in self._active_engines.keys():
                 del self._active_engines[e]
             else:
                 self._active_engines[e] = e()
 
-    def _navigate(self, n):
-        self._position += n
-        if self._position < 0:
-            self._position = 0
-        elif self._position >= len(self._all_engines) + 2:
-            self._position = len(self._all_engines) + 2 - 1
-
     def _mk_win_w(self):
-        a = [len(self._mk_item_caption(e)) + 7 for e in self._all_engines]
+        a = [
+            len(i) if type(i) is str else len(self._mk_item_caption(i)) + 7
+            for i in self._items
+        ]
         a.append(len(self.WINDOW_CAPTION) + 2)
         return max(a)
 
     def _mk_window(self):
         h, w = self._screen.getmaxyx()
-        win_h = len(self._all_engines) + 4
-
+        win_h = min(len(self.items) + 2, h - 4)
         win_w = self._mk_win_w()
 
         self._window = self._screen.subwin(
@@ -375,7 +455,7 @@ class EngineSelectionWindow(object):
         )).split('//')[1].replace('www.', '')
 
 
-class ItemWindow(object):
+class ItemWindow(BaseScrollableWindow):
     SORT_ORIGIN = 0
     SORT_SEEDERS = 1
     SORT_LEECHERS = 2
@@ -401,20 +481,15 @@ class ItemWindow(object):
             open_torrent_link_fn,
             engine_selection_fn
     ):
+        super().__init__(screen, None, screen.subwin(0, 0))
 
-        self._screen = screen
         self._load_more_results_fn = load_more_results_fn
         self._fetch_magnet_fn = fetch_magnet_fn
         self._start_search_fn = start_search_fn
         self._open_torrent_link_fn = open_torrent_link_fn
         self._engine_selection_fn = engine_selection_fn
 
-        self._window = screen.subwin(0, 0)
         self._window.keypad(1)
-
-        self._items = None
-        self._position = 0
-        self._draw_start_index = 0
 
         self._current_sort = self.SORT_SEEDERS
         self._current_sort_type = self.SORT_DESC
@@ -423,13 +498,11 @@ class ItemWindow(object):
 
         logging.getLogger('bs4.dammit').setLevel(logging.ERROR)
 
-    @property
-    def items(self):
-        return self._items
-
     def process_key(self, key):
         do_exit = False
-        h, w = self._screen.getmaxyx()
+
+        super().process_key(key)
+
         if key in (curses.KEY_ENTER, ord("\n")):
             if self._items:
                 item = self._items[self._position]
@@ -442,18 +515,6 @@ class ItemWindow(object):
                 item = self._items[self._position]
                 if type(item) is not self.LoadMoreItem:
                     self._open_torrent_link_fn(item)
-        elif key == curses.KEY_UP:
-            if self._items:
-                self._navigate(-1)
-        elif key == curses.KEY_DOWN:
-            if self._items:
-                self._navigate(1)
-        elif key == curses.KEY_PPAGE:
-            if self._items:
-                self._navigate(-(h - 2) // 2)
-        elif key == curses.KEY_NPAGE:
-            if self._items:
-                self._navigate((h - 2) // 2)
         elif key == curses.ascii.ESC:
             do_exit = True
         elif key == ord('/'):
@@ -499,26 +560,7 @@ class ItemWindow(object):
              size_max,
              start_search
              ):
-        if self._items:
-            if h - 2 < len(self._items):
-                max_items = min((h - 2, len(self._items)))
-                if self._position >= self._draw_start_index + max_items \
-                        or self._position < len(self._items) - max_items and \
-                        self._draw_start_index > self._position:
-                    if self._position - max_items + 1 > 0:
-                        if self._position + 1 == self._draw_start_index:
-                            self._draw_start_index = max((0, self._position))
-                        else:
-                            self._draw_start_index = max(
-                                (0, self._position - max_items + 1)
-                            )
-                    else:
-                        self._draw_start_index = max((0, self._position))
-            else:
-                max_items = len(self._items)
-                self._draw_start_index = 0
-        else:
-            max_items = 0
+        max_items = super()._get_max_items(h)
 
         if self._items is None:
             if start_search:
@@ -574,8 +616,7 @@ class ItemWindow(object):
         if self._items:
             h, _ = self._screen.getmaxyx()
             max_items = min((h - 2, len(self._items)))
-            if self._position > len(self._items) - max_items:
-                self._draw_start_index = self._position - max_items
+            super()._resize(max_items)
 
     def refresh(self):
         self._window.refresh()
@@ -590,19 +631,6 @@ class ItemWindow(object):
 
     def set_search_end(self):
         self._start_search_in_prg = False
-
-    def _navigate(self, n):
-        self._position += n
-        if abs(n) == 1:
-            if self._position < 0:
-                self._position = len(self._items) - 1
-            elif self._position >= len(self._items):
-                self._position = 0
-        else:
-            if self._position < 0:
-                self._position = 0
-            elif self._position >= len(self._items):
-                self._position = len(self._items) - 1
 
     def _sort_items(self, items, sort_type, ignore_reverse=False):
         if items and len(items) > 0:
@@ -860,8 +888,8 @@ class App(object):
         self._lock.acquire()
         self._top_bar.resize()
         self._bottom_bar.resize()
-        self._item_window.resize()
         self._engine_selection_win.resize()
+        self._item_window.resize()
         self._lock.release()
 
     def _create_selection_win(self):
