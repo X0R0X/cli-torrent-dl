@@ -20,6 +20,17 @@ Edit `~/.config/torrentdl/config.json` to customize your preferred torrent
 client and 
 browser (default is qbittorent and firefox).
 
+## Docker
+Opening magnet links in your preferred torrent client will not work, of course.
+
+### Build
+
+    $ docker build . -t tordl
+
+### Run JSON RPC Server
+
+    $ docker run -it tordl -s
+
 ## Usage
 
 ### CLI Usage

@@ -1,0 +1,15 @@
+.venv/
+dist/
+img/
+.git
+.idea
+.Dockerignore
+Dockerfile
+.gitignore
+MANIFEST.in
+README.md
+LICENSE.md
+setup.cfg
+setup.py
+setup.sh
+tordl.sh
