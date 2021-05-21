@@ -29,7 +29,7 @@ Opening magnet links in your preferred torrent client will not work, of course.
 
 ### Run JSON RPC Server
 
-    $ docker run -it tordl -s
+    $ docker run -p 57000:57000 -it tordl -s
 
 ## Usage
 
