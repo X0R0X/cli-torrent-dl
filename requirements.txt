@@ -16,11 +16,11 @@ jeepney==0.6.0
 keyring==23.0.1
 multidict==5.1.0
 packaging==20.9
-pkg-resources==0.0.0
 pkginfo==1.7.0
 pycparser==2.20
 Pygments==2.8.1
 pyparsing==2.4.7
+pyperclip==1.8.2
 pyxdg==0.27
 readme-renderer==29.0
 requests==2.25.1
