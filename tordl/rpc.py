@@ -27,7 +27,7 @@ def init_logger(log_stdout, name):
     return logger
 
 
-class RpcMsg(object):
+class RpcMsg:
     JSON_ERROR = {
         'jsonrpc': '2.0',
         'error': {
@@ -49,7 +49,7 @@ class RpcMsg(object):
     ERR_GENERIC = 4, 'Error: '
 
 
-class JsonRpcServer(object):
+class JsonRpcServer:
     METHOD_SEARCH = 'search'
 
     def __init__(
@@ -104,14 +104,14 @@ class JsonRpcServer(object):
                         id_=id_
                     )
                     return json_response(data=m)
-                else:
-                    self._log_err('Invalid RPC method: %s' % method)
-                    return json_response(data=self._mk_msg(
-                        None,
-                        RpcMsg.ERR_INVALID_RPC_METHOD,
-                        method,
-                        id_
-                    ))
+
+                self._log_err('Invalid RPC method: %s' % method)
+                return json_response(data=self._mk_msg(
+                    None,
+                    RpcMsg.ERR_INVALID_RPC_METHOD,
+                    method,
+                    id_
+                ))
             except json.decoder.JSONDecodeError as e:
                 self._log_err(e)
                 return json_response(data=self._mk_msg(
@@ -132,7 +132,7 @@ class JsonRpcServer(object):
             )
 
     def _log_err(self, e, traceback=False):
-        if type(e) is BaseException:
+        if isinstance(e, BaseException):
             self._log.error(
                 '%s during receiving message: %s' % (type(e), e)
             )
@@ -141,7 +141,8 @@ class JsonRpcServer(object):
         if traceback:
             self._log.error(e.with_traceback())
 
-    def _mk_msg(self, response=None, err_msg=None, err_add=None, id_=0):
+    @staticmethod
+    def _mk_msg(response=None, err_msg=None, err_add=None, id_=0):
         if response is not None:
             m = RpcMsg.JSON_RESPONSE
             m['result'] = response
@@ -150,11 +151,12 @@ class JsonRpcServer(object):
             m['error']['code'], m['error']['message'] = err_msg
             if err_add:
                 m['error']['message'] += ' %s' % err_add
+
         m['id'] = id_
         return m
 
 
-class JsonRpcClient(object):
+class JsonRpcClient:
     def __init__(
             self,
             host,
@@ -192,8 +194,7 @@ class JsonRpcClient(object):
             }
 
             self._log.debug(
-                'Calling RPC id=%d, method=%s, params=%s' %
-                (
+                'Calling RPC id=%d, method=%s, params=%s' % (
                     self._id,
                     method,
                     str(params)
@@ -219,19 +220,19 @@ class JsonRpcClient(object):
                                 )
                             )
                             return e
-                        else:
-                            result = result['result']
-                            print(result)
-                            self._log.debug(
-                                'RPC Response received id=%d, method=%s, '
-                                'params=%s, '
-                                'result=%s' % (
-                                    self._id,
-                                    method,
-                                    str(params),
-                                    pformat(result)
-                                )
+
+                        result = result['result']
+                        print(result)
+                        self._log.debug(
+                            'RPC Response received id=%d, method=%s, '
+                            'params=%s, '
+                            'result=%s' % (
+                                self._id,
+                                method,
+                                str(params),
+                                pformat(result)
                             )
-                            return result
+                        )
+                        return result
             except BaseException as e:
                 self._log.error('%s: %s' % (type(e), e))
