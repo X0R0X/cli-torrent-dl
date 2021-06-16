@@ -7,7 +7,7 @@ from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
 
 import uvloop
-from aiohttp import ClientSession, ClientTimeout
+from aiohttp import ClientConnectionError, ClientSession, ClientTimeout
 
 import tordl.config as cfg
 
@@ -122,6 +122,8 @@ class BaseDl(object):
                 ) as response:
                     return await response.read()
         except asyncio.exceptions.TimeoutError:
+            return None
+        except ClientConnectionError:
             return None
 
     def _mk_search_url(self, expression):
