@@ -205,7 +205,7 @@ class BottomBar(object):
             self._add_to_search_history(self._search_term)
             self.set_search(False)
             self._search_fn(self._search_term)
-        elif key == curses.KEY_BACKSPACE:
+        elif key in [curses.KEY_BACKSPACE, ord("\x7f")]
             i = len(self._search_term) + self._delta_cur_pos
             if i > 0:
                 self._search_term = '%s%s' % (
