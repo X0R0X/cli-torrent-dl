@@ -16,7 +16,6 @@ jeepney==0.6.0
 keyring==23.0.1
 multidict==5.1.0
 packaging==20.9
-pkg-resources==0.0.0
 pkginfo==1.7.0
 pycparser==2.20
 Pygments==2.8.1
@@ -32,7 +31,6 @@ soupsieve==2.2.1
 tqdm==4.60.0
 typing-extensions==3.7.4.3
 urllib3==1.26.4
-uvloop==0.15.2
 webencodings==0.5.1
 yarl==1.6.3
 zipp==3.4.1

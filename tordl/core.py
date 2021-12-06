@@ -6,7 +6,11 @@ import time
 from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
 
-import uvloop
+try:
+    import uvloop
+except Exception:
+    uvloop = None
+
 from aiohttp import ClientSession, ClientTimeout
 
 import tordl.config as cfg
@@ -364,7 +368,7 @@ class DlFacade(object):
 
     async def _wait_with_progress(self, coros, search_progress=None):
         done, pending = await asyncio.wait(
-            coros, loop=self._loop, return_when=FIRST_COMPLETED
+            coros, return_when=FIRST_COMPLETED
         )
         done = list(done)
         if search_progress:
@@ -372,7 +376,7 @@ class DlFacade(object):
 
         while pending:
             done_, pending = await asyncio.wait(
-                pending, loop=self._loop, return_when=FIRST_COMPLETED
+                pending, return_when=FIRST_COMPLETED
             )
             done.extend(done_)
             if search_progress:
