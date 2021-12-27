@@ -33,11 +33,11 @@ fi
 
 PYTHON_VERSION="$(python3 -V | tr -d '[A-Za-z .]')"
 if [[ $PYTHON_VERSION =~ ^3[89] ]]; then
-	PYTHON_BIN="python3"
+	PYTHON_BIN='python3'
 elif [[ -n $(which python3.9) ]]; then
-	PYTHON_BIN="python3.9"
+	PYTHON_BIN='python3.9'
 elif [[ -n $(which python3.8) ]]; then
-	PYTHON_BIN="python3.8"
+	PYTHON_BIN='python3.8'
 else
 	printf '%s\n' 'tordl requires Python 3.8 or higher.' \
 		'Please install it (on debian based systems: $ sudo apt-get install python3.8)'
@@ -69,14 +69,13 @@ fi
 
 while true; do
 	# This ugly expansion is to get the last elem of $LN_CMD in a more compatible way.
-	read -p "Do you want to link tordl.sh to ${LN_CMD[${#LN_CMD[@]}-1]}? [y/N]: " choice
-	# Convert $choice to lowercase to keep things clean.
+	read -p "Do you want to link tordl.sh to ${LN_CMD[${#LN_CMD[@]}-1]}? [Y/n]: " choice
 	case "${choice,,}" in
-		'y')
+		''|'y')
 			"${LN_CMD[@]}"
 			break
 		;;
-		''|'n')
+		'n')
 			break
 		;;
 	esac
