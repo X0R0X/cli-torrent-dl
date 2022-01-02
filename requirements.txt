@@ -32,7 +32,7 @@ soupsieve==2.2.1
 tqdm==4.60.0
 typing-extensions==3.7.4.3
 urllib3==1.26.4
-uvloop==0.15.2
+uvloop==0.16.0
 webencodings==0.5.1
 yarl==1.6.3
 zipp==3.4.1
