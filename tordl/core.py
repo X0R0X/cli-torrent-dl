@@ -6,7 +6,11 @@ import time
 from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
 
-import uvloop
+try:
+    import uvloop
+except Exception:
+    uvloop = None
+
 from aiohttp import ClientSession, ClientTimeout
 
 import tordl.config as cfg
