@@ -971,7 +971,7 @@ class App(object):
         self._lock.acquire()
 
         if item.magnet_url:
-            func.run_torrent_client(item.magnet_url)
+            func.export_torrent(item.magnet_url)
         else:
             self._bottom_bar.set_fetching_magnet_url()
             future = asyncio.run_coroutine_threadsafe(
@@ -993,7 +993,7 @@ class App(object):
             ml = None
 
         if ml:
-            func.run_torrent_client(ml)
+            func.export_torrent(ml)
         else:
             # TODO magnurl error
             pass
