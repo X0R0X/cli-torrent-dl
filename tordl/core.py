@@ -26,7 +26,7 @@ def mk_loop():
         )
 
 
-class SearchResult(object):
+class SearchResult:
     def __init__(
             self, origin, name, link, seeders, leechers, size, magnet_url=None
     ):
@@ -58,7 +58,7 @@ class SearchResult(object):
                 self.size_b = 0.0
 
 
-class SearchProgress(object):
+class SearchProgress:
     def __init__(self):
         self.max_ = 1
         self._progress = 0
@@ -78,7 +78,7 @@ class SearchProgress(object):
         return self._percent
 
 
-class BaseDl(object):
+class BaseDl:
     NAME = ''
     BASE_URL = None
     SEARCH_URL = None
@@ -163,7 +163,7 @@ class BaseDl(object):
         self._headers['Referer'] = url
 
 
-class DlFacade(object):
+class DlFacade:
     class GetMagnetUrlTask(Task):
         def __init__(self, loop, coro, search_result, search_progress):
             super().__init__(coro, loop=loop)
@@ -260,7 +260,8 @@ class DlFacade(object):
 
         return items
 
-    def aggregate_same_magnets(self, search_results, new_search_results=None):
+    @staticmethod
+    def aggregate_same_magnets(search_results, new_search_results=None):
         if not new_search_results:
             new_search_results = search_results
 
@@ -312,7 +313,8 @@ class DlFacade(object):
 
         return search_results
 
-    def _load_engines(self):
+    @staticmethod
+    def _load_engines():
         loader = importlib.machinery.SourceFileLoader(
             'engines_mod', cfg.CFG_ENGINES_FILE
         )
@@ -321,7 +323,7 @@ class DlFacade(object):
         loader.exec_module(engines_mod)
 
         all_engines = []
-        for name, obj in inspect.getmembers(engines_mod):
+        for _, obj in inspect.getmembers(engines_mod):
             if inspect.isclass(obj):
                 mro = obj.mro()
                 if len(mro) > 2 and BaseDl in mro:
@@ -385,8 +387,8 @@ class DlFacade(object):
         return done
 
 
-class SearchEngineTest(object):
-    class Test(object):
+class SearchEngineTest:
+    class Test:
         def __init__(self, engine):
             self.engine = engine
 
@@ -494,7 +496,7 @@ class SearchEngineTest(object):
         print('-' * ln)
 
 
-class Api(object):
+class Api:
     def __init__(
             self,
             dl_classes=None,
@@ -530,7 +532,8 @@ class Api(object):
 
         return self._mk_json_output(search_results, self._pretty_output)
 
-    def _mk_json_output(self, search_results, pretty=False):
+    @staticmethod
+    def _mk_json_output(search_results, pretty=False):
         result = []
         j = {'result': result}
         for sr in search_results:

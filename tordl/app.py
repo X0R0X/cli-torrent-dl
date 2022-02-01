@@ -1,11 +1,11 @@
 import asyncio
 import curses
+import curses.ascii
 import logging
 import os
 import string
 from collections import deque
 from concurrent.futures._base import CancelledError
-from curses import ascii
 from functools import partial
 from threading import Thread, Lock
 from time import sleep
@@ -14,7 +14,7 @@ from tordl import config as cfg, func, core
 from tordl.core import SearchResult, DlFacade, SearchProgress
 
 
-class BaseScrollableWindow(object):
+class BaseScrollableWindow:
     def __init__(self, screen, items=None, window=None):
         self._screen = screen
         self._window = window
@@ -83,7 +83,7 @@ class BaseScrollableWindow(object):
                 self._position = len(self._items) - 1
 
 
-class TopBar(object):
+class TopBar:
     NO_CAPTION = 'No.'
     TITLE_CAPTION = 'Title'
     SEED_CAPTION = 'Seed'
@@ -139,7 +139,7 @@ class TopBar(object):
         self._window_top.clear()
 
 
-class BottomBar(object):
+class BottomBar:
     SEARCH_CAPTION = 'Search: '
     SEARCH_IN_PROGRESS_CAPTION = 'Searching...'
     LOADING_MORE_RESULTS_CAPTION = 'Loading more results...'
@@ -163,7 +163,6 @@ class BottomBar(object):
         self._search_history_index = len(self._search_history)
         self._search_history_temp = ''
 
-        h, _ = self._screen.getmaxyx()
         self._window_bottom = self._screen.subwin(
             1, 0, self._screen.getmaxyx()[0] - 1, 1
         )
@@ -303,7 +302,8 @@ class BottomBar(object):
     def set_search_progress(self, search_progress):
         self._search_progress = search_progress
 
-    def _load_search_history(self):
+    @staticmethod
+    def _load_search_history():
         history = []
         if os.path.exists(cfg.CFG_HISTORY_FILE):
             with open(cfg.CFG_HISTORY_FILE) as f:
@@ -312,7 +312,8 @@ class BottomBar(object):
 
         return deque(history, cfg.HISTORY_MAX_LENGTH)
 
-    def _save_search_history(self, search_history):
+    @staticmethod
+    def _save_search_history(search_history):
         with open(cfg.CFG_HISTORY_FILE, 'w') as f:
             for r in search_history:
                 f.write('%s\n' % r)
@@ -380,7 +381,7 @@ class EngineSelectionWindow(BaseScrollableWindow):
                     mode = curses.A_NORMAL
 
                 item = self._items[self._draw_start_index + index]
-                if type(item) is str:
+                if isinstance(item, str):
                     if len(self.WINDOW_CAPTION) % 2 == 0:
                         sp = ' ' * ((win_w - len(item) - 3) // 2)
                         cap = '[%s%s%s]' % (sp, item, sp)
@@ -433,7 +434,7 @@ class EngineSelectionWindow(BaseScrollableWindow):
 
     def _mk_win_w(self):
         a = [
-            len(i) if type(i) is str else len(self._mk_item_caption(i)) + 7
+            len(i) if isinstance(i, str) else len(self._mk_item_caption(i)) + 7
             for i in self._items
         ]
         a.append(len(self.WINDOW_CAPTION) + 2)
@@ -449,7 +450,8 @@ class EngineSelectionWindow(BaseScrollableWindow):
         )
         self._window.bkgd(' ', curses.color_pair(1) | curses.A_BOLD)
 
-    def _mk_item_caption(self, item):
+    @staticmethod
+    def _mk_item_caption(item):
         return ('%s (%s)' % (
             item.BASE_URL, item.NAME
         )).split('//')[1].replace('www.', '')
@@ -506,14 +508,14 @@ class ItemWindow(BaseScrollableWindow):
         if key in (curses.KEY_ENTER, ord("\n")):
             if self._items:
                 item = self._items[self._position]
-                if type(item) is self.LoadMoreItem:
+                if isinstance(item, self.LoadMoreItem):
                     self._load_more_results_fn()
                 else:
                     self._fetch_magnet_fn(item)
         if key == 32:
             if self._items:
                 item = self._items[self._position]
-                if type(item) is not self.LoadMoreItem:
+                if not isinstance(item, self.LoadMoreItem):
                     self._open_torrent_link_fn(item)
         elif key == curses.ascii.ESC:
             do_exit = True
@@ -583,7 +585,7 @@ class ItemWindow(BaseScrollableWindow):
                 else:
                     mode = curses.A_NORMAL
 
-                if type(item) is self.LoadMoreItem:
+                if isinstance(item, self.LoadMoreItem):
                     msg = '%s' % item.name
                     color = curses.color_pair(2)
                 else:
@@ -634,7 +636,7 @@ class ItemWindow(BaseScrollableWindow):
 
     def _sort_items(self, items, sort_type, ignore_reverse=False):
         if items and len(items) > 0:
-            if type(items[-1]) is self.LoadMoreItem:
+            if isinstance(items[-1], self.LoadMoreItem):
                 lmi = items.pop()
             else:
                 lmi = None
@@ -681,15 +683,16 @@ class ItemWindow(BaseScrollableWindow):
             if self._current_sort_type == self.SORT_DESC:
                 self._current_sort_type = self.SORT_ASC
                 return False
-            else:
-                self._current_sort_type = self.SORT_DESC
-                return True
-        else:
+
             self._current_sort_type = self.SORT_DESC
-            self._current_sort = sort_type
             return True
 
-    def _format_field(self, s, max_, dots=False):
+        self._current_sort_type = self.SORT_DESC
+        self._current_sort = sort_type
+        return True
+
+    @staticmethod
+    def _format_field(s, max_, dots=False):
         if not s:
             s = 'None'
 
@@ -709,7 +712,7 @@ class ItemWindow(BaseScrollableWindow):
         self._window.clear()
 
 
-class App(object):
+class App:
     def __init__(self, screen, search=''):
         self._screen = screen
         self._start_search_str = search
@@ -746,7 +749,8 @@ class App(object):
 
         self._display()
 
-    def _mk_event_loop(self):
+    @staticmethod
+    def _mk_event_loop():
         core.mk_loop()
         loop = asyncio.new_event_loop()
         t = Thread(target=loop.run_forever)
@@ -828,7 +832,7 @@ class App(object):
         a0 = []
         if self._item_window.items:
             for item in self._item_window.items:
-                if type(item) is not ItemWindow.LoadMoreItem:
+                if not isinstance(item, ItemWindow.LoadMoreItem):
                     a0.append(len(','.join([i.NAME for i in item.origins])))
         a0.append(len(TopBar.SOURCE_CAPTION))
         source_max = max(a0)
@@ -1000,7 +1004,8 @@ class App(object):
         self._bottom_bar.set_action_complete()
         self._lock.release()
 
-    def _open_torrent_link(self, item):
+    @staticmethod
+    def _open_torrent_link(item):
         func.open_torrent_link(
             '%s%s' % (item.origins[0].BASE_URL, item.links[0])
         )
