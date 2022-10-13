@@ -127,7 +127,13 @@ class BaseDl(object):
                     return await response.read()
         except asyncio.exceptions.TimeoutError:
             return None
-        except ClientConnectionError:
+        except Exception:
+            # This should handle "aiohttp.client_exceptions.
+            # ClientConnectionError", SSL Errors, ConnectionResetError and
+            # basically all kind of errors happening on an HTTP connection. Some
+            # Torrent Sites we scrape might close a connection due to too many
+            # requests and so on. It's better to just die silently then break
+            # the ncurses window and basically 'break' whole app.
             return None
 
     def _mk_search_url(self, expression):
