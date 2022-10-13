@@ -16,7 +16,7 @@ setup(
     package_dir={
         '': 'tordl'
     },
-    version='1.0.8',
+    version='1.0.9',
     license='MIT',
     description='CLI Torrent Search and Download',
     author='x0r0x',
