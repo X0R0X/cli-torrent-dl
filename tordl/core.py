@@ -127,6 +127,8 @@ class BaseDl(object):
                     return await response.read()
         except asyncio.exceptions.TimeoutError:
             return None
+        except ClientConnectionError:
+            return None
 
     def _mk_search_url(self, expression):
         raise NotImplementedError()
