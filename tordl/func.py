@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import webbrowser
+import pyperclip
 from functools import partial
 
 import tordl.config as cfg
@@ -33,6 +34,10 @@ def run_torrent_client(magnet_url):
 
 def open_torrent_link(link):
     webbrowser.open(link)
+
+
+def copy_url_to_clipboard(link):
+    pyperclip.copy(link)
 
 
 def direct_download(st, loop=None):

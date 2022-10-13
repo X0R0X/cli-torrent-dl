@@ -476,18 +476,20 @@ class ItemWindow(BaseScrollableWindow):
             self,
             screen,
             load_more_results_fn,
-            fetch_magnet_fn,
+            fetch_magnet_url_with_action,
             start_search_fn,
             open_torrent_link_fn,
-            engine_selection_fn
+            engine_selection_fn,
+            copy_link_to_clipboard_fn,
     ):
         super().__init__(screen, None, screen.subwin(0, 0))
 
         self._load_more_results_fn = load_more_results_fn
-        self._fetch_magnet_fn = fetch_magnet_fn
+        self._fetch_magnet_url_with_action = fetch_magnet_url_with_action
         self._start_search_fn = start_search_fn
         self._open_torrent_link_fn = open_torrent_link_fn
         self._engine_selection_fn = engine_selection_fn
+        self._copy_link_to_clipboard_fn = copy_link_to_clipboard_fn
 
         self._window.keypad(1)
 
@@ -509,12 +511,12 @@ class ItemWindow(BaseScrollableWindow):
                 if type(item) is self.LoadMoreItem:
                     self._load_more_results_fn()
                 else:
-                    self._fetch_magnet_fn(item)
+                    self._fetch_magnet_url_with_action(
+                        item,
+                        func.run_torrent_client
+                    )
         if key == 32:
-            if self._items:
-                item = self._items[self._position]
-                if type(item) is not self.LoadMoreItem:
-                    self._open_torrent_link_fn(item)
+            self._process_current_item_with_action(self._open_torrent_link_fn)
         elif key == curses.ascii.ESC:
             do_exit = True
         elif key == ord('/'):
@@ -531,6 +533,11 @@ class ItemWindow(BaseScrollableWindow):
             self._load_more_results_fn()
         elif key == ord('p'):
             self._engine_selection_fn()
+        elif key == ord('x'):
+            self._process_current_item_with_action(
+                self._fetch_magnet_url_with_action,
+                self._copy_link_to_clipboard_fn
+            )
 
         return do_exit
 
@@ -632,6 +639,9 @@ class ItemWindow(BaseScrollableWindow):
     def set_search_end(self):
         self._start_search_in_prg = False
 
+    def clear(self):
+        self._window.clear()
+
     def _sort_items(self, items, sort_type, ignore_reverse=False):
         if items and len(items) > 0:
             if type(items[-1]) is self.LoadMoreItem:
@@ -676,6 +686,12 @@ class ItemWindow(BaseScrollableWindow):
 
         return items
 
+    def _process_current_item_with_action(self, fn, *args, **kwargs):
+        if self._items:
+            item = self._items[self._position]
+            if type(item) is not self.LoadMoreItem:
+                fn(item, *args, **kwargs)
+
     def _sort_reverse(self, sort_type):
         if self._current_sort == sort_type:
             if self._current_sort_type == self.SORT_DESC:
@@ -705,9 +721,6 @@ class ItemWindow(BaseScrollableWindow):
 
         return s
 
-    def clear(self):
-        self._window.clear()
-
 
 class App(object):
     def __init__(self, screen, search=''):
@@ -735,10 +748,11 @@ class App(object):
         self._item_window = ItemWindow(
             screen,
             self._load_more_results,
-            self._fetch_magnet_url,
+            self._fetch_magnet_url_with_action,
             self._bottom_bar.set_search,
             self._open_torrent_link,
-            self._create_selection_win
+            self._create_selection_win,
+            self._copy_url_to_clipboard
         )
         self._engine_selection_win = EngineSelectionWindow(
             self._screen, self._downloader
@@ -967,23 +981,25 @@ class App(object):
         self._item_window.set_search_end()
         self._lock.release()
 
-    def _fetch_magnet_url(self, item):
+    def _fetch_magnet_url_with_action(self, item, action_fn=None):
         self._lock.acquire()
 
         if item.magnet_url:
-            func.run_torrent_client(item.magnet_url)
+            action_fn(item.magnet_url)
         else:
             self._bottom_bar.set_fetching_magnet_url()
             future = asyncio.run_coroutine_threadsafe(
                 self._downloader.get_magnet_url(item),
                 self._loop
             )
-            future.add_done_callback(self._on_magnet_url_fetched)
+            future.add_done_callback(
+                partial(self._on_magnet_url_fetched, action_fn=action_fn)
+            )
             self._pending_tasks.append(future)
 
         self._lock.release()
 
-    def _on_magnet_url_fetched(self, future):
+    def _on_magnet_url_fetched(self, future, action_fn):
         self._lock.acquire()
         self._pending_tasks.remove(future)
         self._bottom_bar.set_action_complete()
@@ -993,7 +1009,7 @@ class App(object):
             ml = None
 
         if ml:
-            func.run_torrent_client(ml)
+            action_fn(ml)
         else:
             # TODO magnurl error
             pass
@@ -1004,3 +1020,6 @@ class App(object):
         func.open_torrent_link(
             '%s%s' % (item.origins[0].BASE_URL, item.links[0])
         )
+
+    def _copy_url_to_clipboard(self, magnet_url):
+        func.copy_url_to_clipboard(magnet_url)

@@ -35,3 +35,4 @@ webencodings==0.5.1
 yarl==1.6.3
 zipp==3.4.1
 uvloop==0.15.0
+pyperclip
