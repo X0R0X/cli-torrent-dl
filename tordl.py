@@ -119,13 +119,7 @@ def parse_args():
         default=cfg.TORRENT_CLIENT_CMD,
         help='Command to execute torrent client with magnet link as a parameter'
     )
-    ap.add_argument(
-        '-b',
-        '--browser-cmd',
-        dest='cfg_browser_cmd',
-        default=cfg.BROWSER_CMD,
-        help='Command to open torrent link in a browser.'
-    )
+
     """
     Mode Test Search Engines
     """
