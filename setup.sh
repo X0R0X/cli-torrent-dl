@@ -31,19 +31,29 @@ elif [[ -e $VENV_DIR ]]; then
 	printf '%s %s\n\n' 'Created backup of virtualenv at' "$VENV_DIR.bak"
 fi
 
-PYTHON_VERSION="$(python3 -V | tr -d '[A-Za-z .]')"
-if [[ $PYTHON_VERSION =~ ^3[89] ]]; then
+PYTHON_LAST_VERSION=11
+PYTHON_MIN_VERSION=8
+PYTHON_DEFAULT_VERSION="$(python3 -V | tr -d '[A-Za-z]' | awk -F . '{print $2}')"
+if [[ $PYTHON_DEFAULT_VERSION -ge $PYTHON_MIN_VERSION ]]; then
+  # if possible, use default system python version
 	PYTHON_BIN='python3'
-elif [[ -n $(which python3.9) ]]; then
-	PYTHON_BIN='python3.9'
-elif [[ -n $(which python3.8) ]]; then
-	PYTHON_BIN='python3.8'
 else
-	printf '%s\n' 'tordl requires Python 3.8 or higher.' \
-		'Please install it (on debian based systems: $ sudo apt-get install python3.8)'
-	exit 1
+  # Default python version too low (or not found) try to find specific version
+  for (( i="$PYTHON_LAST_VERSION"; i >= 8; i--)); do
+    if [[ -n "$(which python3."$i")" ]]; then
+      PYTHON_BIN="python3.$i"
+      break
+    fi
+  done
+  if [[ -z $PYTHON_BIN ]]; then
+    # No suitable python version was found, inform user and exit
+    printf '%s\n' 'tordl requires Python 3.8 or higher.' \
+      'Please install it (on debian based systems: $ sudo apt-get install python3.8)'
+    exit 1
+  fi
 fi
 
+printf '%s\n' "Using Python $PYTHON_BIN, located here: $(which $PYTHON_BIN)"
 # Get path of this script, resolving all symlinks.
 SOURCE="${BASH_SOURCE[0]}"
 while [[ -h $SOURCE ]]; do
