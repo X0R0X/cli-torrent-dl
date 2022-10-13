@@ -31,7 +31,7 @@ elif [[ -e $VENV_DIR ]]; then
 	printf '%s %s\n\n' 'Created backup of virtualenv at' "$VENV_DIR.bak"
 fi
 
-PYTHON_LAST_VERSION=11
+PYTHON_LAST_VERSION=10
 PYTHON_MIN_VERSION=8
 PYTHON_DEFAULT_VERSION="$(python3 -V | tr -d '[A-Za-z]' | awk -F . '{print $2}')"
 if [[ $PYTHON_DEFAULT_VERSION -ge $PYTHON_MIN_VERSION ]]; then
