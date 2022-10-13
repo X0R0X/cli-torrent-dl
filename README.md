@@ -51,8 +51,7 @@ Config
 ------
 
 Edit `~/.config/torrentdl/config.json` to customize your preferred torrent 
-client and 
-browser (default is qbittorent and firefox).
+client (default is qbittorent).
 
 Docker
 ------
@@ -105,13 +104,14 @@ format to the standard output and exit. Consider using `-m` or
 * f - Sort by size
 * m - Load more search results (if possible)
 * p - Search engines selection
-* KEY_DOWN - Move to next in search history
-* ENTER - Search
-* ESC - Exit search
+* x - Copy magnet link to system clipboard
 
 ##### Search
 
+* KEY_DOWN - Move to next in search history
 * KEY_UP - Move to previous in search history
+* ENTER - Search
+* ESC - Exit search
 
 ##### Search Engine Selection
 
