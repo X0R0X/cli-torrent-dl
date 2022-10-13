@@ -133,7 +133,7 @@ class BaseDl(object):
             # basically all kind of errors happening on an HTTP connection. Some
             # Torrent Sites we scrape might close a connection due to too many
             # requests and so on. It's better to just die silently then break
-            # the ncurses window and basically 'break' whole app.
+            # the ncurses window and basically 'break' the whole app.
             return None
 
     def _mk_search_url(self, expression):
@@ -472,8 +472,8 @@ class SearchEngineTest(object):
         self._lock.release()
 
     async def run(self):
-        # Because we also introduced some 'adult' trackers, this is the most
-        # sane thing to search for. In the end, it's the internet, right ?
+        # Because we also introduced some 'adult' trackers, this is the sanest
+        #  thing to search for. In the end, it's the internet, right ?
         st = 'xxx'
         dl = DlFacade(self._loop)
         if self._test_all:
