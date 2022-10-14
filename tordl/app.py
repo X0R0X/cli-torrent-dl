@@ -594,18 +594,24 @@ class ItemWindow(BaseScrollableWindow):
                     msg = '%s' % item.name
                     color = curses.color_pair(2)
                 else:
+                    div = chr(9474)
                     color = curses.color_pair(3)
-                    msg = "%s. %s|%s|%s|%s|%s" % (
+                    msg = "%s.%s%s%s%s%s%s%s%s%s%s" % (
                         str(index + self._draw_start_index + 1).zfill(
                             no_len
                         ),
+                        div,
                         self._format_field(item.name, title_length, True),
+                        div,
                         self._format_field(
                             ','.join([i.NAME for i in item.origins]),
                             source_max
                         ),
+                        div,
                         self._format_field(str(item.seeders), seeders_max),
+                        div,
                         self._format_field(str(item.leechers), leechers_max),
+                        div,
                         self._format_field(item.size, size_max)
                     )
                 msg = msg + ' ' * (w - len(msg) - 1)
