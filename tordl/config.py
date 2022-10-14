@@ -15,7 +15,7 @@ CFG_HISTORY_FILE = os.path.join(CFG_DIR, 'search_history.txt')
 
 SEARCH_ENGINES = [
     '1337x', 'BTDB', 'Glo', 'KAT', 'Lime',
-    'Nyaa', 'Solid', 'TGx', 'TPB', 'Zooqle'
+    'Nyaa', 'Solid', 'TGx', 'TPB'
 ]
 TORRENT_CLIENT_CMD = 'qbittorrent %s'
 
