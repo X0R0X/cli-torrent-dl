@@ -31,7 +31,7 @@ elif [[ -e $VENV_DIR ]]; then
 	printf '%s %s\n\n' 'Created backup of virtualenv at' "$VENV_DIR.bak"
 fi
 
-PYTHON_LAST_VERSION=10
+PYTHON_LATEST_VERSION=10
 PYTHON_MIN_VERSION=8
 PYTHON_DEFAULT_VERSION="$(python3 -V | tr -d '[A-Za-z]' | awk -F . '{print $2}')"
 if [[ $PYTHON_DEFAULT_VERSION -ge $PYTHON_MIN_VERSION ]]; then
@@ -39,7 +39,7 @@ if [[ $PYTHON_DEFAULT_VERSION -ge $PYTHON_MIN_VERSION ]]; then
 	PYTHON_BIN='python3'
 else
   # Default python version too low (or not found) try to find specific version
-  for (( i="$PYTHON_LAST_VERSION"; i >= 8; i--)); do
+  for (( i="$PYTHON_LATEST_VERSION"; i >= "$PYTHON_MIN_VERSION"; i--)); do
     if [[ -n "$(which python3."$i")" ]]; then
       PYTHON_BIN="python3.$i"
       break
