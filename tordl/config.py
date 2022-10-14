@@ -6,20 +6,16 @@ from xdg.BaseDirectory import save_config_path
 
 from tordl import engines
 
-CFG_DIR = os.path.join(
-    os.path.expanduser('~'), save_config_path('torrentdl')
-)
+CFG_DIR = os.path.join(os.path.expanduser('~'), save_config_path('torrentdl'))
 CFG_FILE = os.path.join(CFG_DIR, 'config.json')
 CFG_ENGINES_FILE = os.path.join(CFG_DIR, 'engines.py')
 CFG_HISTORY_FILE = os.path.join(CFG_DIR, 'search_history.txt')
 
-SEARCH_ENGINES = [
-    '1337x', 'Glo', 'KAT', 'Lime', 'Nyaa',  'TGx', 'TPB'
-]
+SEARCH_ENGINES = ['1337x', 'Glo', 'KAT', 'Lime', 'Nyaa',  'TGx', 'TPB']
+
 TORRENT_CLIENT_CMD = 'qbittorrent %s'
 
 HISTORY_MAX_LENGTH = 100
-
 PAGE_NUM_DOWNLOAD = 1
 REQUEST_TIMEOUT = 5
 
