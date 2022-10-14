@@ -145,7 +145,7 @@ class TpbParty(BaseDl):
 
 class LimeTorrents(BaseDl):
     NAME = 'Lime'
-    BASE_URL = 'https://www.limetorrents.info'
+    BASE_URL = 'https://www.limetorrents.lol'
     SEARCH_URL = '%s/search/all/%s/seeds/%s/' % (BASE_URL, '%s', '%s')
 
     def _mk_search_url(self, expression):
@@ -157,10 +157,10 @@ class LimeTorrents(BaseDl):
     def _process_search(self, response):
         bs = BeautifulSoup(response, features='html.parser')
         result = []
-        try:
-            t = bs.find(class_='table2')
-            trs = t.findAll('tr')[1:]
-            for tr in trs:
+        trs = bs.findAll('tr', attrs={'bgcolor': '#F4F4F4'})
+        trs.extend(bs.findAll('tr', attrs={'bgcolor': '#FFFFFF'}))
+        for tr in trs:
+            try:
                 a = tr.find(class_='tt-name').findAll('a')[1]
                 name = a.string
                 link = a.attrs['href']
@@ -172,8 +172,8 @@ class LimeTorrents(BaseDl):
                         self, name, link, seeders, leechers, size
                     )
                 )
-        except Exception:
-            pass
+            except Exception:
+                pass
 
         return result
 
