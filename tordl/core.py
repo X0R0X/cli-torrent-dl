@@ -376,7 +376,7 @@ class DlFacade(object):
 
     async def _wait_with_progress(self, coros, search_progress=None):
         done, pending = await asyncio.wait(
-            coros, return_when=FIRST_COMPLETED
+            [ asyncio.create_task(cor) for cor in coros ], return_when=FIRST_COMPLETED
         )
         done = list(done)
         if search_progress:
