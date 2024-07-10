@@ -229,7 +229,7 @@ class Dl1337xto(BaseDl):
     def _process_magnet_link(self, response):
         bs = BeautifulSoup(response, features='html.parser')
         try:
-            x = bs.find(class_='box-info torrent-detail-page vpn-info-wrap')
+            x = bs.find(class_='box-info torrent-detail-page')
             if not x:
                 x = bs.find(
                     class_=
