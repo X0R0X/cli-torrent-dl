@@ -42,6 +42,8 @@ Installation
 ### Prerequisites
 
 * Python 3.8+
+* pip
+* virtualenv
 
 ### Setup
 
