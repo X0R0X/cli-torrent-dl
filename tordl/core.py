@@ -132,7 +132,7 @@ class BaseDl(object):
             # ClientConnectionError", SSL Errors, ConnectionResetError and
             # basically all kind of errors happening on an HTTP connection. Some
             # Torrent Sites we scrape might close a connection due to too many
-            # requests and so on. It's better to just die silently then break
+            # requests and so on. It's better to just die silently than break
             # the ncurses window and basically 'break' the whole app.
             return None
 
