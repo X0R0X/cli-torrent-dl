@@ -6,12 +6,14 @@ set -euo pipefail
 
 C_RED="\033[0;31m"
 C_GREEN="\033[0;32m"
+C_YEllOW="\033[1;33m"
 C_NONE="\033[0m"
 
 # Get path of this script, resolving all symlinks.
 SOURCE="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
 LN_CMD=('ln' '-sf' "$SCRIPT_DIR/tordl.sh")
+CMD_BIN_PATH="$HOME/.local/bin"
 
 while [[ -h $SOURCE ]]; do
 	SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" > /dev/null 2>&1 && pwd)"
@@ -19,20 +21,24 @@ while [[ -h $SOURCE ]]; do
 	[[ $SOURCE = /* ]] || SOURCE="$SCRIPT_DIR/$SOURCE"
 done
 
-if [[ $PATH =~ "$HOME/.local/bin" ]]; then
-    BIN_DIR="$HOME/.local/bin/tordl"
+if [[ $PATH =~ "$CMD_BIN_PATH" ]]; then
+	if [ ! -d "$CMD_BIN_PATH" ]; then
+	  printf "${C_YEllOW}You Have $CMD_BIN_PATH in your PATH environment variable but directory does not exist. We will create it.${C_NONE}\n"
+	  mkdir "$CMD_BIN_PATH"
+  fi
+  BIN_DIR="$HOME/.local/bin/tordl"
 	LN_CMD+=("$BIN_DIR")
 	BIN_DIR_SUDO=0
 else
-    BIN_DIR='/usr/local/bin/tordl'
+  BIN_DIR='/usr/local/bin/tordl'
 	LN_CMD=('sudo' "${LN_CMD[@]}" "$BIN_DIR")
-    BIN_DIR_SUDO=1
+  BIN_DIR_SUDO=1
 fi
 
 
 XDG_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/torrentdl"
 VENV_DIR="$XDG_CONFIG_DIR/.venv"
-PYTHON_LATEST_VERSION=11
+PYTHON_LATEST_VERSION=12
 PYTHON_MIN_VERSION=8
 PYTHON_DEFAULT_VERSION="$(python3 -V | tr -d '[A-Za-z]' | awk -F . '{print $2}')"
 UNINSTALL=0
@@ -80,7 +86,7 @@ if (( $UNINSTALL == 1 )); then
     printf "${C_RED}Unable to remove Config Dir $XDG_CONFIG_DIR, does not exist${C_NONE}\n"
   fi
 
-  echo "Removing Binary Link $TORDL_BIN_PATH..."
+  `echo` "Removing Binary Link $TORDL_BIN_PATH..."
   if [[ -e $TORDL_BIN_PATH ]]; then
     if (( "$BIN_DIR_SUDO" == 0 )); then
       rm $TORDL_BIN_PATH
@@ -97,9 +103,9 @@ fi
 
 printf ${C_GREEN}
 if [[ -z "$PYTHON_DEFAULT_VERSION" ]]; then
-  echo "Using Python Version 3.$PYTHON_LATEST_VERSION"
+  printf "Using Python Version 3.$PYTHON_LATEST_VERSION\n"
 else
-  echo "Using Python Version 3.$PYTHON_DEFAULT_VERSION"
+  printf "Using Python Version 3.$PYTHON_DEFAULT_VERSION\n"
 fi
 printf ${C_NONE}
 
@@ -150,7 +156,7 @@ else
   fi
 fi
 
-printf '${C_GREEN}%s\n' "Using Python $PYTHON_BIN, located here: $(which $PYTHON_BIN)${C_NONE}\n"
+printf "${C_GREEN}Using Python $PYTHON_BIN, located here: $(which $PYTHON_BIN)${C_NONE}\n"
 
 virtualenv -p $PYTHON_BIN "$VENV_DIR"
 
