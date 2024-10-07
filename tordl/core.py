@@ -171,6 +171,15 @@ class BaseDl(object):
     def _set_referer(self, url):
         self._headers['Referer'] = url
 
+    @staticmethod
+    def _parse_k_string(s):
+        s = s.strip()
+        if 'K' in s:
+            n = float(s[:-1])
+            return int(n * 1000)
+        else:
+            return s
+
 
 class DlFacade(object):
     class GetMagnetUrlTask(Task):

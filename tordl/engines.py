@@ -299,15 +299,6 @@ class SolidTorrents(BaseDl):
 
         return result
 
-    @staticmethod
-    def _parse_k_string(s):
-        s = s.strip()
-        if 'K' in s:
-            n = float(s[:-1])
-            return int(n * 1000)
-        else:
-            return s
-
 
 class GloTorrents(BaseDl):
     NAME = 'Glo'
@@ -348,6 +339,49 @@ class GloTorrents(BaseDl):
                     )
         except Exception:
             pass
+
+        return result
+
+
+class Torrentz2(BaseDl):
+    NAME = 'Torrentz2'
+    BASE_URL = 'https://torrentz2.nz'
+    SEARCH_URL = f'{BASE_URL}/search?q=%s&page=%s'
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (expression, self._current_index)
+
+    def _process_search(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        result = []
+        try:
+            dls = bs.find(class_='results').findAll('dl')
+            for dl in dls:
+                a = dl.find('a')
+                name = a.text
+                link = '/'.join(a.attrs['href'].split('/')[3:])
+                dd = dl.find('dd')
+                spans = dd.findAll('span')[2:]
+                size = spans[0].text
+                seeds = self._parse_k_string(spans[1].text)
+                leeches = self._parse_k_string(spans[2].text)
+                magnet_url = dd.find('a').attrs['href']
+
+                result.append(
+                    SearchResult(
+                        self,
+                        name,
+                        link,
+                        seeds,
+                        leeches,
+                        size,
+                        magnet_url
+                    )
+                )
+
+        except Exception:
+            pass
+
         return result
 
     def _mk_magnet_url(self, link):
