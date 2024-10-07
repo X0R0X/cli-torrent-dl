@@ -1,7 +1,3 @@
-import json
-
-from urllib.parse import urlencode
-
 from bs4 import BeautifulSoup
 
 from tordl.core import BaseDl, SearchResult
@@ -213,3 +209,47 @@ class SukebeiNyaa(NyaaTracker):
     SEARCH_URL = '%s/?f=0&c=0_0&q=%s&p=%s&s=seeders&o=desc' % (
         BASE_URL, '%s', '%s'
     )
+
+
+class TorrentDownload(BaseDl):
+    NAME = 'TorrentDownload'
+    BASE_URL = 'https://www.torrentdownload.info'
+    SEARCH_URL = f'{BASE_URL}/search?q=%s&p=%s'
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (expression, str(self._current_index))
+
+    def _mk_magnet_url(self, link):
+        return '%s%s' % (self.BASE_URL, link)
+
+    def _process_search(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        result = []
+        try:
+            table = bs.findAll(class_='table2')[1]
+            trs = table.findAll('tr')[1:]
+            for tr in trs:
+                a = tr.find(class_='tt-name')
+
+                name = a.text
+                link = a.find('a').attrs['href']
+                seeders = tr.find(class_='tdseed').text.replace(',', '')
+                leechers = tr.find(class_='tdleech').text.replace(',', '')
+                size = tr.findAll(class_='tdnormal')[1].text.replace(',', '')
+
+                result.append(
+                    SearchResult(
+                        self, name, link, seeders, leechers, size
+                    )
+                )
+        except Exception:
+            pass
+
+        return result
+
+    def _process_magnet_link(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        try:
+            return bs.findAll(class_='tosa')[2].attrs['href']
+        except Exception:
+            return None
