@@ -50,53 +50,6 @@ class KickAssTorrents(BaseDl):
             return None
 
 
-class GloTorrents(BaseDl):
-    NAME = 'Glo'
-    BASE_URL = 'https://www.gtdb.to'
-    SEARCH_URL = '%s/search_results.php?search=%s&sort=seeders&' \
-                 'order=desc&page=%s' % (BASE_URL, '%s', '%s')
-
-    def _mk_search_url(self, expression):
-        return self.SEARCH_URL % (expression, str(self._current_index - 1))
-
-    def _process_search(self, response):
-        bs = BeautifulSoup(response, features='html.parser')
-        result = []
-        try:
-            trs = bs.find(class_='ttable_headinner').findAll('tr')[1:]
-            for tr in trs:
-                c2 = tr.findAll(class_='ttable_col2')
-                if len(c2) > 1:
-                    c1 = tr.findAll(class_='ttable_col1')
-                    a = c2[0].findAll('a')[1]
-                    name = a.attrs['title']
-                    link = a.attrs['href']
-                    magnet_url = c2[1].find('a').attrs['href']
-                    size = c1[2].text
-                    seeders = c2[2].find('b').text.replace(',', '')
-                    leechers = c1[3].find('b').text.replace(',', '')
-                    result.append(
-                        SearchResult(
-                            self,
-                            name,
-                            link,
-                            seeders,
-                            leechers,
-                            size,
-                            magnet_url
-                        )
-                    )
-        except Exception:
-            pass
-        return result
-
-    def _mk_magnet_url(self, link):
-        pass
-
-    def _process_magnet_link(self, response):
-        pass
-
-
 class TpbParty(BaseDl):
     NAME = 'TPB'
     BASE_URL = 'https://tpb.party'
