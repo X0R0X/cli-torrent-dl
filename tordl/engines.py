@@ -7,48 +7,6 @@ from bs4 import BeautifulSoup
 from tordl.core import BaseDl, SearchResult
 
 
-class KickAssTorrents(BaseDl):
-    NAME = 'KAT'
-    BASE_URL = 'https://kickasss.to'
-    # BASE_URL = 'https://katcr.to'
-    SEARCH_URL = '%s/search/%s/%s/' % (BASE_URL, '%s', '%s')
-
-    def _mk_search_url(self, expression):
-        return self.SEARCH_URL % (expression, str(self._current_index))
-
-    def _process_search(self, response):
-        bs = BeautifulSoup(response, features='html.parser')
-        result = []
-        try:
-            trs = bs.findAll('tr', class_='odd')
-            trs.extend(bs.findAll('tr', class_='even'))
-            for tr in trs:
-                link = tr.find(class_='cellMainLink').attrs['href']
-                size = tr.find(class_='nobr center').text.replace('\n', '')
-                seeders = tr.find(class_='green center').text
-                leechers = tr.find(class_='red lasttd center').text
-                name = tr.find(class_='cellMainLink').text.replace('\n', ''). \
-                    strip()
-                result.append(
-                    SearchResult(
-                        self, name, link, seeders, leechers, size
-                    )
-                )
-        except Exception:
-            pass
-        return result
-
-    def _mk_magnet_url(self, link):
-        return '%s%s' % (self.BASE_URL, link)
-
-    def _process_magnet_link(self, response):
-        bs = BeautifulSoup(response, features='html.parser')
-        try:
-            m = bs.find('a', class_='kaGiantButton').attrs['href']
-            return m
-        except Exception:
-            return None
-
 
 class TpbParty(BaseDl):
     NAME = 'TPB'
