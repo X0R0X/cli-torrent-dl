@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import shutil
 import sys
 
 from tordl import config as cfg, func
@@ -128,7 +127,10 @@ def parse_args():
         '--test-search-engines',
         action='store_true',
         default=False,
-        help='Test all active search engines for errors.'
+        help=(
+            'Test all active search engines for errors, or supply additional position '
+            'arguments as preferred search engines'
+        )
     )
     ap.add_argument(
         '--test-all',
@@ -219,19 +221,19 @@ if __name__ == "__main__":
     parsed_args = parse_args()
     cfg.override_cfg(parsed_args)
 
-    search_term = ' '.join(parsed_args.search)
+    term = ' '.join(parsed_args.search)
 
     if parsed_args.download:
-        func.direct_download(search_term)
+        func.direct_download(term)
     elif parsed_args.test_search_engines:
-        func.test_search_engines(parsed_args.test_all)
+        func.test_search_engines(parsed_args.test_all, term)
     elif parsed_args.api:
-        print(func.run_api(search_term, parsed_args.cfg_pretty_json))
+        print(func.run_api(term, parsed_args.cfg_pretty_json))
     elif parsed_args.rpc_server:
         func.run_rpc_server()
     elif parsed_args.rpc_client:
-        func.run_rpc_client(search_term)
+        func.run_rpc_client(term)
     else:
-        func.run_curses_ui(search_term)
+        func.run_curses_ui(term)
 
     exit(0)

@@ -68,9 +68,9 @@ def direct_download(st, loop=None):
         print('No results found.')
 
 
-def test_search_engines(test_all=True, loop=None):
+def test_search_engines(test_all=True, term=None, loop=None):
     loop = _mk_loop(loop)
-    test = SearchEngineTest(test_all, loop)
+    test = SearchEngineTest(test_all, term, loop)
     loop.run_until_complete(test.run())
 
 

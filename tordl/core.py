@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import inspect
 import json
+import sys
 import time
 from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
@@ -376,7 +377,7 @@ class DlFacade(object):
 
     async def _wait_with_progress(self, coros, search_progress=None):
         done, pending = await asyncio.wait(
-            [ asyncio.create_task(cor) for cor in coros ], return_when=FIRST_COMPLETED
+            [asyncio.create_task(cor) for cor in coros], return_when=FIRST_COMPLETED
         )
         done = list(done)
         if search_progress:
@@ -406,12 +407,39 @@ class SearchEngineTest(object):
             ]
             self.error = False
 
-    def __init__(self, test_all=True, loop=None):
-        self._test_all = test_all
+    def __init__(self, test_all=True, term=None, loop=None):
         self._loop = loop or asyncio.get_event_loop()
+        self._engines = self._mk_engines(test_all, term)
 
         self._test_results = []
         self._lock = Lock()
+
+    def _mk_engines(self, test_all, term):
+        dl = DlFacade(self._loop)
+        if test_all:
+            engines = [e() for e in dl.all_engines]
+        else:
+            engines = list(dl.engines.values())
+
+        if term:
+            lst = term.split(' ')
+            engines_by_term = [e for e in engines if e.NAME in lst]
+            if engines_by_term:
+                engines = engines_by_term
+            else:
+                self._panic(
+                    f'No engines in arguments, '
+                    f'select one or more from {[e.NAME for e in engines]}'
+                )
+
+        return engines
+
+    @staticmethod
+    def _panic(msg):
+        # try:
+        print(msg)
+        sys.exit(1)
+        # except S
 
     async def _on_results_fetched(self, task, test):
         time_start = time.time()
@@ -475,13 +503,8 @@ class SearchEngineTest(object):
         # Because we also introduced some 'adult' trackers, this is the sanest
         #  thing to search for. In the end, it's the internet, right ?
         st = 'xxx'
-        dl = DlFacade(self._loop)
-        if self._test_all:
-            engines = (e() for e in dl.all_engines)
-        else:
-            engines = dl.engines.values()
         tasks = []
-        for e in engines:
+        for e in self._engines:
             cls = e.__class__
             print(
                 (
@@ -492,6 +515,7 @@ class SearchEngineTest(object):
             test = self.Test(e)
             t = Task(self._on_results_fetched(asyncio.create_task(e.search(st)), test))
             tasks.append(t)
+        print()
 
         await asyncio.wait(tasks)
 
