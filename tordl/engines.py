@@ -309,12 +309,11 @@ class GloTorrents(BaseDl):
 
     def _mk_search_url(self, expression):
         if self._current_index == 1:
-            return self.SEARCH_URL[:-8] % expression
+            return self.SEARCH_URL[:-32] % expression
         else:
-            return self.SEARCH_URL % (expression, str(self._current_indexaD))
+            return self.SEARCH_URL % (expression, str(self._current_index))
 
     def _process_search(self, response):
-        print(response)
         bs = BeautifulSoup(response, features='html.parser')
         result = []
         try:
