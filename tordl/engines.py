@@ -3,7 +3,6 @@ from bs4 import BeautifulSoup
 from tordl.core import BaseDl, SearchResult
 
 
-
 class TpbParty(BaseDl):
     NAME = 'TPB'
     BASE_URL = 'https://tpb.party'
@@ -253,3 +252,58 @@ class TorrentDownload(BaseDl):
             return bs.findAll(class_='tosa')[2].attrs['href']
         except Exception:
             return None
+
+
+class SolidTorrents(BaseDl):
+    NAME = 'SolidTorrents'
+    BASE_URL = 'https://solidtorrents.to'
+    SEARCH_URL = f'{BASE_URL}/search?q=%s&page=%s'
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (expression, str(self._current_index))
+
+    def _process_search(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        result = []
+        try:
+            lis = bs.findAll(class_='card search-result my-2')[2:]
+
+            for li in lis:
+                a = li.find(class_='title w-100 truncate').find('a')
+                name = a.text
+                link = a.attrs['href']
+                magnet_url = (
+                    li.find(class_='links center-flex hide-on-small px-3')
+                    .findAll('a')[1]
+                    .attrs['href']
+                )
+
+                stats_divs = li.find(class_='stats').findAll('div')
+                size = stats_divs[1].text
+                seeders = self._parse_k_string(stats_divs[2].text)
+                leechers = self._parse_k_string(stats_divs[3].text)
+
+                result.append(
+                    SearchResult(
+                        self,
+                        name,
+                        link,
+                        seeders,
+                        leechers,
+                        size,
+                        magnet_url
+                    )
+                )
+        except Exception:
+            pass
+
+        return result
+
+    @staticmethod
+    def _parse_k_string(s):
+        s = s.strip()
+        if 'K' in s:
+            n = float(s[:-1])
+            return int(n * 1000)
+        else:
+            return s
