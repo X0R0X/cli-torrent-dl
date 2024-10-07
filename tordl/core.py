@@ -413,11 +413,11 @@ class SearchEngineTest(object):
         self._test_results = []
         self._lock = Lock()
 
-    async def _on_results_fetched(self, future, test):
+    async def _on_results_fetched(self, task, test):
         time_start = time.time()
 
         try:
-            results = await future
+            results = await task
         except BaseException as e:
             results = None
             test.error = True
@@ -480,20 +480,20 @@ class SearchEngineTest(object):
             engines = (e() for e in dl.all_engines)
         else:
             engines = dl.engines.values()
-        futures = []
+        tasks = []
         for e in engines:
             cls = e.__class__
             print(
-                'Running test: %s [%s]...' % (
-                    '%s.%s' % (cls.__module__, cls.__qualname__), e.NAME
+                (
+                    f'Running test {cls.__module__}.{cls.__qualname__} '
+                    f'[{e.NAME}] ({e.BASE_URL})'
                 )
             )
-            t = self.Test(e)
-            f = asyncio.ensure_future(e.search(st), loop=self._loop)
-            f = self._on_results_fetched(f, t)
-            futures.append(f)
+            test = self.Test(e)
+            t = Task(self._on_results_fetched(asyncio.create_task(e.search(st)), test))
+            tasks.append(t)
 
-        await asyncio.wait(futures)
+        await asyncio.wait(tasks)
 
         ln = max((len(t) for t in self._test_results))
         print('-' * ln)
