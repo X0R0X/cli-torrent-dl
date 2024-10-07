@@ -7,8 +7,8 @@ About
 -----
 
 tordl provides convenient and quick way to search torrent magnet links (and run
-preferred torrent client) via major torrent sites (ThePirateBay, LimeTorrents,
-Zooqle, 1337x, GloTorrents, KickAssTorrents, SolidTorrents, BTDB, TGx, Nyaa by
+preferred torrent client) via major torrent sites (1337x, Glo, Lime, Nyaa, SolidTorrents, TorrentDownload, Torrentz2,
+TPB by
 default) through command line.
 
 Table of Contents
@@ -28,7 +28,7 @@ Table of Contents
     * [Browse Mode](#browse-mode)
       * [Search](#search)
       * [Search Engine Selection](#search-engine-selection)
-    * [I'm Feeling Lucky Mode](#im-feeling-lucky-mode)
+    * [I am Feeling Lucky Mode](#im-feeling-lucky-mode)
     * [Test Mode](#test-mode)
   * [RPC](#rpc)
     * [RPC Server](#rpc-server)
@@ -123,7 +123,7 @@ format to the standard output and exit. Consider using `-m` or
 * BUTTON_OK - Save and exit engine selection
 * BUTTON_SAVE - Persist selection in config and exit engine selection
 
-#### I'm Feeling Lucky Mode
+#### I am Feeling Lucky Mode
 
 Directly downloads and opens torrent client with magnet link from first search
 result. Run with `-d` or `--download`.
