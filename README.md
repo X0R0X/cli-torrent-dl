@@ -177,3 +177,10 @@ Creating Custom Search Engines
 
 See `~/.config/torrentdl/engines.py` and 
 `~/.config/torrentdl/config.json#search_engines`.
+
+
+
+Updating Search definitions after an update
+----------------
+After you update a version containing new search engine definitions, run $`./setup.sh -i` to reload them from the
+code to your `.config` directory.

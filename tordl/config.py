@@ -11,7 +11,7 @@ CFG_FILE = os.path.join(CFG_DIR, 'config.json')
 CFG_ENGINES_FILE = os.path.join(CFG_DIR, 'engines.py')
 CFG_HISTORY_FILE = os.path.join(CFG_DIR, 'search_history.txt')
 
-SEARCH_ENGINES = [
+CFG_SEARCH_ENGINES_DEFAULT = [
     '1337x',
     'Lime',
     'Nyaa',
@@ -22,6 +22,8 @@ SEARCH_ENGINES = [
     'Torr2',
     'YBT'
 ]
+
+SEARCH_ENGINES = CFG_SEARCH_ENGINES_DEFAULT
 
 TORRENT_CLIENT_CMD = 'qbittorrent %s'
 

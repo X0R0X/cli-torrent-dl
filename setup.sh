@@ -42,12 +42,14 @@ PYTHON_LATEST_VERSION=12
 PYTHON_MIN_VERSION=8
 PYTHON_DEFAULT_VERSION="$(python3 -V | tr -d '[A-Za-z]' | awk -F . '{print $2}')"
 UNINSTALL=0
+UPDATE=0
 TORDL_BIN_PATH="${LN_CMD[${#LN_CMD[@]}-1]}"
 
 function print_help {
     printf "${C_GREEN}-h   | --help${C_NONE}      : Print this help\n"
     printf "${C_GREEN}-p=* | --python=*${C_NONE}  : Use specific python3 minor version (8,9,10,11) [example: setup.sh -p=11]\n"
-    printf "${C_GREEN}-u   | --uninstall${C_NONE} : Uninstall tordl from the System\n [example: setup.sh -u]"
+    printf "${C_GREEN}-u   | --uninstall${C_NONE} : Uninstall tordl from the System [example: setup.sh -u]\n"
+    printf "${C_GREEN}-i   | --update${C_NONE}    : Try to pull latest changes and update search engine definitions\n\n"
 }
 
 for i in "$@"; do
@@ -63,6 +65,9 @@ for i in "$@"; do
     -u|--uninstall)
       UNINSTALL=1
       ;;
+    -i|--update)
+      UPDATE=1
+      ;;
     -h|--help)
       print_help
       exit 0
@@ -73,6 +78,17 @@ for i in "$@"; do
       ;;
    esac
 done
+
+if (( $UPDATE == 1 )); then
+  printf "${C_GREEN}Trying to update the repo...${C_NONE}\n"
+  git checkout master
+  git pull origin master
+  printf "${C_GREEN}Reloading engine definitions from the code...${C_NONE}\n"
+  tordl -r
+  printf "${C_GREEN}Done.${C_NONE}\n"
+
+  exit 0
+fi
 
 # Uninstall tordl from the System
 if (( $UNINSTALL == 1 )); then

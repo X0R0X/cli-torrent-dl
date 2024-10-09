@@ -105,11 +105,18 @@ def parse_args():
     System
     """
     ap.add_argument(
-        '-r',
+        '-R',
         '--revert-to-default',
         action='store_true',
         default=False,
         help='Purge all custom configuration and revert to default.'
+    )
+    ap.add_argument(
+        '-r',
+        '--reload-search-engines',
+        action='store_true',
+        default=False,
+        help='Reload search engines from the source code. Useful when there is an update.'
     )
     ap.add_argument(
         '-c',
@@ -208,13 +215,18 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    if '-r' in sys.argv or '--revert-to-default' in sys.argv:
+    if '-R' in sys.argv or '--revert-to-default' in sys.argv:
         if os.path.exists(cfg.CFG_FILE):
             os.remove(cfg.CFG_FILE)
         if os.path.exists(cfg.CFG_ENGINES_FILE):
             os.remove(cfg.CFG_ENGINES_FILE)
         cfg.init_cfg()
         print('Reverted to default config.')
+        exit(0)
+    elif '-r' in sys.argv or '--reload-search-engines' in sys.argv:
+        cfg.SEARCH_ENGINES = cfg.CFG_SEARCH_ENGINES_DEFAULT
+        cfg.write_cfg()
+        print('Default search engine settings reloaded.')
         exit(0)
 
     cfg.init_cfg()
