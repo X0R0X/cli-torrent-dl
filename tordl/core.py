@@ -2,9 +2,10 @@ import asyncio
 import importlib
 import inspect
 import json
+import os
 import sys
+import tempfile
 import time
-from abc import ABC, abstractmethod
 from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
 
@@ -38,7 +39,6 @@ class SearchResult(object):
             leechers,
             size,
             magnet_url=None,
-            torrent_url=None
     ):
         self.origins = [type(origin)]
         self.links = [link]
@@ -47,7 +47,6 @@ class SearchResult(object):
         self.leechers = int(leechers)
         self.size = size.replace(' ', '').encode('ascii', 'ignore').decode()
         self.magnet_url = magnet_url
-        self.torrent_url = torrent_url
 
         sb = self.size.lower()
         if 'kb' in sb:
@@ -158,6 +157,18 @@ class BaseDl(object):
 
     async def _process_magnet_link(self, response):
         pass
+
+    @staticmethod
+    async def _fetch_torrent_file(url):
+        async with ClientSession() as sess:
+            async with sess.get(url) as response:
+                a = await response.read()
+                fd, fp = tempfile.mkstemp()
+
+                with os.fdopen(fd, 'wb') as f:
+                    f.write(a)
+
+                return fp
 
     def _create_headers(self):
         return {
@@ -526,17 +537,18 @@ class SearchEngineTest(object):
         for e in self._engines:
             cls = e.__class__
             print(
-                (
-                    f'Running test {cls.__module__}.{cls.__qualname__} '
-                    f'[{e.NAME}] ({e.BASE_URL})'
-                )
+                f'Running test {cls.__module__}.{cls.__qualname__} '
+                f'[{e.NAME}] ({e.BASE_URL})'
             )
             test = self.Test(e)
-            t = Task(self._on_results_fetched(asyncio.create_task(e.search(st)), test))
+            t = Task(
+                self._on_results_fetched(asyncio.create_task(e.search(st)), test)
+            )
             tasks.append(t)
-        print()
 
+        print()
         await asyncio.wait(tasks)
+        print()
 
         ln = max((len(t) for t in self._test_results))
         print('-' * ln)

@@ -420,15 +420,21 @@ class YourBitTorrent(BaseDl):
 
     async def _process_magnet_link(self, response):
         """
-        This fetches URL to the torrent, with transmission and qbitorrent it works fina
-        as a parameter.
+        This fetches URL to the torrent file, with transmission and qbitorrent it works
+        fine as a parameter.
         """
         bs = BeautifulSoup(response, features='html.parser')
+        tor_file_url = None
         try:
             tor_file_url = bs.findAll(
                 class_='col-md-4 text-center'
             )[1].find('a').attrs['href']
 
-            return tor_file_url
+            return await self._fetch_torrent_file(tor_file_url)
+
         except Exception:
-            return None
+            pass
+
+        # return torrent file url at least, for some torrent clients it's enough
+        return tor_file_url
+7
