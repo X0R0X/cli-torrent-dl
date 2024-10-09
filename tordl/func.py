@@ -138,3 +138,18 @@ def run_rpc_client(search_term, loop=None):
 def run_curses_ui(st):
     os.environ.setdefault('ESCDELAY', '0')
     curses.wrapper(partial(App, search=st))
+
+
+def run_reload_default_cfg():
+    if os.path.exists(cfg.CFG_FILE):
+        os.remove(cfg.CFG_FILE)
+    if os.path.exists(cfg.CFG_ENGINES_FILE):
+        os.remove(cfg.CFG_ENGINES_FILE)
+    cfg.init_cfg()
+    print('Reverted to default config.')
+
+
+def run_reload_default_engines():
+    cfg.SEARCH_ENGINES = cfg.CFG_SEARCH_ENGINES_DEFAULT
+    cfg.write_cfg()
+    print('Default search engine settings reloaded.')

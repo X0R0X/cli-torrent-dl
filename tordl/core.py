@@ -351,31 +351,6 @@ class DlFacade(object):
 
         return search_results
 
-    def _load_engines(self):
-        loader = importlib.machinery.SourceFileLoader(
-            'engines_mod', cfg.CFG_ENGINES_FILE
-        )
-        spec = importlib.util.spec_from_loader('engines_mod', loader)
-        engines_mod = importlib.util.module_from_spec(spec)
-        loader.exec_module(engines_mod)
-
-        all_engines = []
-        for name, obj in inspect.getmembers(engines_mod):
-            if inspect.isclass(obj):
-                mro = obj.mro()
-                if len(mro) > 2 and BaseDl in mro:
-                    all_engines.append(obj)
-
-        engines = {}
-        for c in all_engines:
-            if c.NAME in cfg.SEARCH_ENGINES:
-                engines[c] = c()
-
-        if not engines:
-            raise RuntimeError("No search engines selected.")
-
-        return engines, all_engines
-
     def _on_fetch_magnet_done(self, task):
         task.search_result.magnet_url = task.result()
         task.remove_done_callback(self._on_fetch_magnet_done)
@@ -405,7 +380,34 @@ class DlFacade(object):
         task.add_done_callback(self._on_fetch_magnet_done)
         self._ml_fetch_tasks.append(task)
 
-    async def _wait_with_progress(self, coros, search_progress=None):
+    @staticmethod
+    def _load_engines():
+        loader = importlib.machinery.SourceFileLoader(
+            'engines_mod', cfg.CFG_ENGINES_FILE
+        )
+        spec = importlib.util.spec_from_loader('engines_mod', loader)
+        engines_mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(engines_mod)
+
+        all_engines = []
+        for name, obj in inspect.getmembers(engines_mod):
+            if inspect.isclass(obj):
+                mro = obj.mro()
+                if len(mro) > 2 and BaseDl in mro:
+                    all_engines.append(obj)
+
+        engines = {}
+        for c in all_engines:
+            if c.NAME in cfg.SEARCH_ENGINES:
+                engines[c] = c()
+
+        if not engines:
+            raise RuntimeError("No search engines selected.")
+
+        return engines, all_engines
+
+    @staticmethod
+    async def _wait_with_progress(coros, search_progress=None):
         done, pending = await asyncio.wait(
             [asyncio.create_task(cor) for cor in coros], return_when=FIRST_COMPLETED
         )

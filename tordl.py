@@ -215,27 +215,17 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    if '-R' in sys.argv or '--revert-to-default' in sys.argv:
-        if os.path.exists(cfg.CFG_FILE):
-            os.remove(cfg.CFG_FILE)
-        if os.path.exists(cfg.CFG_ENGINES_FILE):
-            os.remove(cfg.CFG_ENGINES_FILE)
-        cfg.init_cfg()
-        print('Reverted to default config.')
-        exit(0)
-    elif '-r' in sys.argv or '--reload-search-engines' in sys.argv:
-        cfg.SEARCH_ENGINES = cfg.CFG_SEARCH_ENGINES_DEFAULT
-        cfg.write_cfg()
-        print('Default search engine settings reloaded.')
-        exit(0)
-
     cfg.init_cfg()
+
     parsed_args = parse_args()
     cfg.override_cfg(parsed_args)
 
     term = ' '.join(parsed_args.search)
-
-    if parsed_args.download:
+    if parsed_args.revert_to_default:
+        func.run_reload_default_cfg()
+    elif parsed_args.reload_search_engines:
+        func.run_reload_default_engines()
+    elif parsed_args.download:
         func.direct_download(term)
     elif parsed_args.test_search_engines:
         func.test_search_engines(parsed_args.test_all, term)
