@@ -4,6 +4,7 @@ import inspect
 import json
 import sys
 import time
+from abc import ABC, abstractmethod
 from asyncio import Task, Event, FIRST_COMPLETED, Lock
 from importlib import machinery, util
 
@@ -29,7 +30,15 @@ def mk_loop():
 
 class SearchResult(object):
     def __init__(
-            self, origin, name, link, seeders, leechers, size, magnet_url=None
+            self,
+            origin,
+            name,
+            link,
+            seeders,
+            leechers,
+            size,
+            magnet_url=None,
+            torrent_url=None
     ):
         self.origins = [type(origin)]
         self.links = [link]
@@ -38,6 +47,7 @@ class SearchResult(object):
         self.leechers = int(leechers)
         self.size = size.replace(' ', '').encode('ascii', 'ignore').decode()
         self.magnet_url = magnet_url
+        self.torrent_url = torrent_url
 
         sb = self.size.lower()
         if 'kb' in sb:
@@ -114,7 +124,7 @@ class BaseDl(object):
         response = await self._get_url(
             self._mk_magnet_url(search_result.links[0])
         )
-        return self._process_magnet_link(response) if response else None
+        return await self._process_magnet_link(response) if response else None
 
     async def _get_url(self, url):
         try:
@@ -140,14 +150,14 @@ class BaseDl(object):
     def _mk_search_url(self, expression):
         raise NotImplementedError()
 
-    def _mk_magnet_url(self, link):
-        raise NotImplementedError()
-
     def _process_search(self, response):
         raise NotImplementedError()
 
-    def _process_magnet_link(self, response):
-        raise NotImplementedError()
+    def _mk_magnet_url(self, link):
+        pass
+
+    async def _process_magnet_link(self, response):
+        pass
 
     def _create_headers(self):
         return {

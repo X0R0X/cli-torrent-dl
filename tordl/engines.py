@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from bs4 import BeautifulSoup
 
 from tordl.core import BaseDl, SearchResult
@@ -42,12 +45,6 @@ class TpbParty(BaseDl):
 
         return result
 
-    def _mk_magnet_url(self, link):
-        pass
-
-    def _process_magnet_link(self, response):
-        pass
-
 
 class LimeTorrents(BaseDl):
     NAME = 'Lime'
@@ -83,14 +80,12 @@ class LimeTorrents(BaseDl):
 
         return result
 
-    def _process_magnet_link(self, response):
+    async def _process_magnet_link(self, response):
         bs = BeautifulSoup(response, features='html.parser')
         try:
             return bs.findAll(class_='csprite_dltorrent')[2].attrs['href']
         except Exception:
-            pass
-
-        return None
+            return None
 
 
 class Dl1337xto(BaseDl):
@@ -132,7 +127,7 @@ class Dl1337xto(BaseDl):
 
         return result
 
-    def _process_magnet_link(self, response):
+    async def _process_magnet_link(self, response):
         bs = BeautifulSoup(response, features='html.parser')
         try:
             x = bs.find(class_='box-info torrent-detail-page')
@@ -195,12 +190,6 @@ class NyaaTracker(BaseDl):
 
         return result
 
-    def _mk_magnet_url(self, link):
-        pass
-
-    def _process_magnet_link(self, response):
-        pass
-
 
 class SukebeiNyaa(NyaaTracker):
     NAME = 'Sukebei'
@@ -246,7 +235,7 @@ class TorrentDownload(BaseDl):
 
         return result
 
-    def _process_magnet_link(self, response):
+    async def _process_magnet_link(self, response):
         bs = BeautifulSoup(response, features='html.parser')
         try:
             return bs.findAll(class_='tosa')[2].attrs['href']
@@ -387,8 +376,62 @@ class Torrentz2(BaseDl):
 
         return result
 
-    def _mk_magnet_url(self, link):
-        pass
 
-    def _process_magnet_link(self, response):
-        pass
+class YourBitTorrent(BaseDl):
+    NAME = 'YBT'
+    BASE_URL = 'https://yourbittorrent.com'
+    SEARCH_URL = f'{BASE_URL}/?q=%s&page=%s'
+
+    def _mk_search_url(self, expression):
+        return self.SEARCH_URL % (expression, self._current_index)
+
+    def _mk_magnet_url(self, link):
+        return '%s%s' % (self.BASE_URL, link)
+
+    def _process_search(self, response):
+        bs = BeautifulSoup(response, features='html.parser')
+        result = []
+        try:
+            trs = bs.find(
+                class_='table table-bordered table-sm table-hover table-striped'
+            ).find('tbody').findAll(class_='table-default')
+
+            for tr in trs:
+                tds = tr.findAll('td')[1:]
+                a = tds[0].find('a')
+                name = a.attrs['title']
+                link = a.attrs['href']
+                size = tds[1].text
+                seeders = tds[3].text
+                leechers = tds[4].text
+
+                result.append(
+                    SearchResult(
+                        self,
+                        name,
+                        link,
+                        seeders,
+                        leechers,
+                        size
+                    )
+                )
+
+        except Exception:
+            pass
+
+        return result
+
+    async def _process_magnet_link(self, response):
+        """
+        This fetches URL to the torrent, with transmission and qbitorrent it works fina
+        as a parameter.
+        """
+        bs = BeautifulSoup(response, features='html.parser')
+        try:
+            tor_file_url = bs.findAll(
+                class_='col-md-4 text-center'
+            )[1].find('a').attrs['href']
+
+            return tor_file_url
+        except Exception:
+            return None

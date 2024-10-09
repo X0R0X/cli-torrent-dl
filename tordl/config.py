@@ -19,7 +19,8 @@ SEARCH_ENGINES = [
     'TorrentDownload',
     'SolidTorrents',
     'Glo',
-    'Torrentz2'
+    'Torrentz2',
+    'YBT'
 ]
 
 TORRENT_CLIENT_CMD = 'qbittorrent %s'

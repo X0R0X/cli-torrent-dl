@@ -711,7 +711,8 @@ class ItemWindow(BaseScrollableWindow):
             self._current_sort = sort_type
             return True
 
-    def _format_field(self, s, max_, dots=False):
+    @staticmethod
+    def _format_field(s, max_, dots=False):
         if not s:
             s = 'None'
 
@@ -1011,14 +1012,10 @@ class App(object):
         self._bottom_bar.set_action_complete()
         try:
             ml = future.result()
-        except CancelledError:
-            ml = None
-
-        if ml:
             action_fn(ml)
-        else:
-            # TODO magnurl error
+        except CancelledError:
             pass
+
         self._bottom_bar.set_action_complete()
         self._lock.release()
 
