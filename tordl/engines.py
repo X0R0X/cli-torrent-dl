@@ -1,6 +1,3 @@
-import os
-import tempfile
-
 from bs4 import BeautifulSoup
 
 from tordl.core import BaseDl, SearchResult
@@ -200,7 +197,7 @@ class SukebeiNyaa(NyaaTracker):
 
 
 class TorrentDownload(BaseDl):
-    NAME = 'TorrentDownload'
+    NAME = 'TD'
     BASE_URL = 'https://www.torrentdownload.info'
     SEARCH_URL = f'{BASE_URL}/search?q=%s&p=%s'
 
@@ -244,7 +241,7 @@ class TorrentDownload(BaseDl):
 
 
 class SolidTorrents(BaseDl):
-    NAME = 'SolidTorrents'
+    NAME = 'ST'
     BASE_URL = 'https://solidtorrents.to'
     SEARCH_URL = f'{BASE_URL}/search?q=%s&page=%s'
 
@@ -336,7 +333,7 @@ class GloTorrents(BaseDl):
 
 
 class Torrentz2(BaseDl):
-    NAME = 'Torrentz2'
+    NAME = 'Torr2'
     BASE_URL = 'https://torrentz2.nz'
     SEARCH_URL = f'{BASE_URL}/search?q=%s&page=%s'
 

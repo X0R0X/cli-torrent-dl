@@ -16,10 +16,10 @@ SEARCH_ENGINES = [
     'Lime',
     'Nyaa',
     'TPB',
-    'TorrentDownload',
-    'SolidTorrents',
+    'TD',
+    'ST',
     'Glo',
-    'Torrentz2',
+    'Torr2',
     'YBT'
 ]
 
