@@ -1,3 +1,5 @@
+import re
+
 from bs4 import BeautifulSoup
 
 from tordl.core import BaseDl, SearchResult
@@ -396,7 +398,7 @@ class YourBitTorrent(BaseDl):
             for tr in trs:
                 tds = tr.findAll('td')[1:]
                 a = tds[0].find('a')
-                name = a.attrs['title']
+                name = re.sub("<[^>]*>", '', a.attrs['title'])
                 link = a.attrs['href']
                 size = tds[1].text
                 seeders = tds[3].text
@@ -437,4 +439,3 @@ class YourBitTorrent(BaseDl):
 
         # return torrent file url at least, for some torrent clients it's enough
         return tor_file_url
-7
