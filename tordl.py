@@ -14,9 +14,9 @@ def parse_args():
     ap = argparse.ArgumentParser(
         description='CLI Torrent Downloader provides convenient and quick way '
                     'to search torrent magnet links (and to run associated '
-                    f'torrent client) via major torrent sites ('
-                    f'{', '.join(cfg.SEARCH_ENGINES)} by default) through '
-                    f'a command line.',
+                    'torrent client) via major torrent sites ('
+                    f'{", ".join(cfg.SEARCH_ENGINES)} by default) through '
+                    'a command line.',
         formatter_class=ArgParseFormatter
     )
     """
