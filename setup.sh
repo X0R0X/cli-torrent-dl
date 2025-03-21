@@ -174,7 +174,15 @@ fi
 
 printf "${C_GREEN}Using Python $PYTHON_BIN, located here: $(which $PYTHON_BIN)${C_NONE}\n"
 
-virtualenv -p $PYTHON_BIN "$VENV_DIR"
+set +euo pipefail
+type virtualenv > /dev/null 2>&1
+if [[ $(echo $?) == "0" ]]; then
+  set -euo pipefail
+  virtualenv -p $PYTHON_BIN "$VENV_DIR"
+else
+  printf "${C_RED}You don't have virtualenv installed. On Debian based systems you can install it by running ${C_YELLOW}'sudo apt update; sudo apt install python3-virtualenv'${C_NONE}\n"
+  exit 1
+fi
 
 PS1=$PS1B
 
