@@ -47,7 +47,7 @@ TORDL_BIN_PATH="${LN_CMD[${#LN_CMD[@]}-1]}"
 
 function print_help {
     printf "${C_GREEN}-h   | --help${C_NONE}      : Print this help\n"
-    printf "${C_GREEN}-p=* | --python=*${C_NONE}  : Use specific python3 minor version (12,13) [example: setup.sh -p=11]\n"
+    printf "${C_GREEN}-p=* | --python=*${C_NONE}  : Use specific python3 minor version (12,13) [example: setup.sh -p=13]\n"
     printf "${C_GREEN}-u   | --uninstall${C_NONE} : Uninstall tordl from the System [example: setup.sh -u]\n"
     printf "${C_GREEN}-i   | --update${C_NONE}    : Try to pull latest changes and update search engine definitions\n\n"
 }
