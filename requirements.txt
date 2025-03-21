@@ -36,3 +36,4 @@ uvloop
 pyperclip
 cffi
 multidict
+ez-lib @ git+https://github.com/x0r0x/ez-lib

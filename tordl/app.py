@@ -5,14 +5,18 @@ import os
 import string
 from collections import deque
 from concurrent.futures._base import CancelledError
+from concurrent.futures.thread import ThreadPoolExecutor
 from curses import ascii
 from functools import partial
 from threading import Thread, Lock
 from time import sleep
 
-from tordl import config as cfg, func, core
+from ez_lib.logger import get_logger
+
+from tordl import config as cfg, func, core, LogModules
 from tordl.core import SearchResult, DlFacade, SearchProgress
 
+log = get_logger(LogModules.App)
 
 class BaseScrollableWindow(object):
     def __init__(self, screen, items=None, window=None):
@@ -765,6 +769,8 @@ class App(object):
             self._screen, self._downloader
         )
 
+        self._cancel_thread_pool = ThreadPoolExecutor(1)
+
         self._display()
 
     def _mk_event_loop(self):
@@ -921,6 +927,8 @@ class App(object):
         self._fetch_results(None)
 
     def _fetch_results(self, search_term):
+        log.info(f'Fetching results for search term "{search_term}"')
+
         self._item_window.set_search_start(
             search_term is not None
         )
@@ -936,7 +944,16 @@ class App(object):
         future.add_done_callback(
             partial(self._on_fetch_pages, search_term=search_term)
         )
+
+        self._cancel_thread_pool.submit(self._check_cancel)
+
         self._pending_tasks.append(future)
+
+    def _check_cancel(self):
+        key = self._screen.getch()
+        if key == curses.ascii.ESC:
+            log.info("Search cancelled.")
+            self._downloader.cancel_search()
 
     def _on_fetch_pages(self, future, search_term):
         if cfg.FETCH_MISSING_MAGNET_LINKS:

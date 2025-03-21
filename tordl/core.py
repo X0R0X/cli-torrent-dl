@@ -98,6 +98,7 @@ class BaseDl(object):
         self._current_index = 1
         self._current_search = None
         self._headers = self._create_headers()
+        self._fetch_url_task = None
 
     async def search(self, expression):
         if expression is None:
@@ -112,11 +113,14 @@ class BaseDl(object):
             self._current_search = expression
 
         self._set_referer('%s/' % self.BASE_URL)
-        response = await self._get_url(
-            self._mk_search_url(self._current_search)
-        )
+
+        response = await self._get_url_cancellable()
 
         return self._process_search(response) if response else None
+
+    def  cancel_url_fetch(self):
+        if self._fetch_url_task:
+            self._fetch_url_task.cancel()
 
     async def get_magnet_url(self, search_result):
         self._set_referer(self._mk_search_url(self._current_search))
@@ -124,6 +128,16 @@ class BaseDl(object):
             self._mk_magnet_url(search_result.links[0])
         )
         return await self._process_magnet_link(response) if response else None
+
+    async def _get_url_cancellable(self):
+        self._fetch_url_task = asyncio.create_task(
+            self._get_url(
+                self._mk_search_url(self._current_search)
+            )
+        )
+        response = await self._fetch_url_task
+        self._fetch_url_task = None
+        return response
 
     async def _get_url(self, url):
         try:
@@ -281,9 +295,9 @@ class DlFacade(object):
     async def fetch_pages(self, search_term, search_progress=None):
         coros = []
         if search_progress:
-            search_progress.max_ = \
+            search_progress.max_ = (
                 len(self._engines.items()) * cfg.PAGE_NUM_DOWNLOAD
-
+            )
         for i in range(cfg.PAGE_NUM_DOWNLOAD):
             coros.append(
                 self.search(search_term if i == 0 else None, search_progress)
@@ -298,6 +312,10 @@ class DlFacade(object):
                 items.extend(result)
 
         return items
+
+    def cancel_search(self):
+        for dl in self._engines.values():
+            dl.cancel_url_fetch()
 
     def aggregate_same_magnets(self, search_results, new_search_results=None):
         if not new_search_results:

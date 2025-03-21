@@ -5,11 +5,13 @@ import os
 import subprocess
 import sys
 import webbrowser
-import pyperclip
 from functools import partial
 
+import pyperclip
+from ez_lib.logger import init_logging, LogConfig
+
 import tordl.config as cfg
-from tordl import core
+from tordl import core, LogModules
 from tordl.app import App
 from tordl.core import DlFacade, SearchEngineTest, Api
 from tordl.rpc import JsonRpcServer, JsonRpcClient
@@ -136,6 +138,7 @@ def run_rpc_client(search_term, loop=None):
 
 
 def run_curses_ui(st):
+    init_logging(LogConfig(LogModules, log_file_path='./log/app.log'))
     os.environ.setdefault('ESCDELAY', '0')
     curses.wrapper(partial(App, search=st))
 
