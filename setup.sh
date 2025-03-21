@@ -6,7 +6,7 @@ set -euo pipefail
 
 C_RED="\033[0;31m"
 C_GREEN="\033[0;32m"
-C_YEllOW="\033[1;33m"
+C_YELLOW="\033[1;33m"
 C_NONE="\033[0m"
 
 # Get path of this script, resolving all symlinks.
@@ -23,7 +23,7 @@ done
 
 if [[ $PATH =~ "$CMD_BIN_PATH" ]]; then
 	if [ ! -d "$CMD_BIN_PATH" ]; then
-	  printf "${C_YEllOW}You Have $CMD_BIN_PATH in your PATH environment variable but directory does not exist. We will create it.${C_NONE}\n"
+	  printf "${C_YELLOW}You Have $CMD_BIN_PATH in your PATH environment variable but directory does not exist. We will create it.${C_NONE}\n"
 	  mkdir "$CMD_BIN_PATH"
   fi
   BIN_DIR="$HOME/.local/bin/tordl"
